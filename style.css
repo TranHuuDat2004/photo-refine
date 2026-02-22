@@ -552,3 +552,127 @@ input[type="range"]::-webkit-slider-thumb:hover {
     background: #e2e8f0;
     border-radius: 10px;
 }
+
+/* Responsive Design */
+
+/* Tablet & Smaller Desktop */
+@media (max-width: 1200px) {
+    .editor-layout {
+        grid-template-columns: 200px 1fr 300px;
+        gap: 1rem;
+    }
+
+    header {
+        padding: 1rem 1.5rem;
+    }
+}
+
+/* Tablet (Portrait) */
+@media (max-width: 1024px) {
+    body {
+        overflow: auto;
+        height: auto;
+    }
+
+    .editor-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        height: auto;
+        padding-bottom: 2rem;
+    }
+
+    .history-panel {
+        grid-row: 3;
+        /* Move history to bottom on tablet */
+        max-height: 400px;
+    }
+
+    .canvas-area {
+        grid-row: 1;
+        min-height: 500px;
+    }
+
+    .controls-panel {
+        grid-row: 2;
+    }
+
+    header {
+        flex-direction: column;
+        gap: 0.75rem;
+        text-align: center;
+        padding: 1.5rem;
+    }
+
+    header p {
+        display: none;
+    }
+}
+
+/* Mobile Devices */
+@media (max-width: 768px) {
+    main {
+        padding: 1rem;
+    }
+
+    .editor-layout {
+        gap: 1rem;
+    }
+
+    .canvas-area {
+        min-height: 350px;
+        border-radius: 1rem;
+    }
+
+    .presets-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .history-list {
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 1rem;
+    }
+
+    .history-item {
+        min-width: 140px;
+        flex-shrink: 0;
+    }
+
+    .history-add-new {
+        min-width: 100px;
+        flex-direction: row;
+        padding: 0.5rem 1rem;
+    }
+
+    .history-add-new span {
+        display: none;
+    }
+
+    .actions {
+        flex-direction: column-reverse;
+    }
+
+    .primary-btn,
+    .secondary-btn {
+        width: 100%;
+    }
+
+    canvas {
+        max-height: 50vh;
+    }
+}
+
+@media (max-width: 480px) {
+    header h1 {
+        font-size: 1.25rem;
+    }
+
+    .sync-status span {
+        display: none;
+    }
+
+    .sync-status {
+        padding: 4px 8px;
+    }
+}
