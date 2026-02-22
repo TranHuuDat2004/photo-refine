@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,12 +10,24 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+// Configure EJS
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// Serve static files from root directory
+app.use(express.static(path.join(__dirname, '../')));
+
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const REPO = process.env.GITHUB_REPO;
 const BRANCH = process.env.GITHUB_BRANCH || 'main';
 
 // Health check
-app.get('/', (req, res) => res.send('PhotoRefine Cloud Sync Server is running!'));
+app.get('/health', (req, res) => res.send('PhotoRefine Cloud Sync Server is running!'));
+
+// Render Main Page
+app.get('/', (req, res) => {
+    res.render('index');
+});
 
 // Upload image to GitHub
 app.post('/upload', async (req, res) => {

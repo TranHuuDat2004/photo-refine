@@ -1,0 +1,12 @@
+# Server dependencies & env
+server/node_modules/
+server/.env
+server/package-lock.json
+
+# Nếu lỡ bạn chạy npm install ở thư mục gốc
+node_modules/
+package-lock.json
+
+# System files
+.DS_Store
+Thumbs.db
