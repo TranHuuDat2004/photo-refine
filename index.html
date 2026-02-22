@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Image Editor Demo</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Photo<span>Refine</span></h1>
+            <p>HTML5 / Canvas Image Processing Demo</p>
+        </header>
+
+        <main>
+            <div class="editor-layout">
+                <div class="canvas-area">
+                    <div class="canvas-wrapper">
+                        <canvas id="mainCanvas"></canvas>
+                        <div id="dropZone" class="drop-zone">
+                            <span>Drop an image or click to upload</span>
+                            <input type="file" id="imageInput" accept="image/*" class="hidden">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls-panel">
+                    <div class="control-group">
+                        <h3>Basic Adjustments</h3>
+                        <div class="slider-item">
+                            <label for="contrast">Contrast</label>
+                            <input type="range" id="contrast" min="0" max="200" value="100">
+                            <span class="value" id="contrastVal">100%</span>
+                        </div>
+                        <div class="slider-item">
+                            <label for="saturation">Saturation</label>
+                            <input type="range" id="saturation" min="0" max="200" value="100">
+                            <span class="value" id="saturationVal">100%</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h3>Tone Controls</h3>
+                        <div class="slider-item">
+                            <label for="highlights">Highlights</label>
+                            <input type="range" id="highlights" min="-100" max="100" value="0">
+                            <span class="value" id="highlightsVal">0</span>
+                        </div>
+                        <div class="slider-item">
+                            <label for="shadows">Shadows</label>
+                            <input type="range" id="shadows" min="-100" max="100" value="0">
+                            <span class="value" id="shadowsVal">0</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h3>Details</h3>
+                        <div class="slider-item">
+                            <label for="sharpen">Sharpen</label>
+                            <input type="range" id="sharpen" min="0" max="100" value="0">
+                            <span class="value" id="sharpenVal">0</span>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button id="resetBtn" class="secondary-btn">Reset All</button>
+                        <button id="downloadBtn" class="primary-btn">Download</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="editor.js"></script>
+</body>
+</html>
