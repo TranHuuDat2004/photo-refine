@@ -125,6 +125,11 @@ async function init() {
 }
 
 function setupEventListeners() {
+    const historyAddNew = document.getElementById('historyAddNew');
+    if (historyAddNew) {
+        historyAddNew.addEventListener('click', () => imageInput.click());
+    }
+
     dropZone.addEventListener('click', () => imageInput.click());
 
     imageInput.addEventListener('change', (e) => {
@@ -377,12 +382,18 @@ function downloadImage() {
 
 async function loadHistory() {
     const edits = await cloud.getAll();
+    const historyList = document.getElementById('historyList');
+
+    // Clear only history items, keep "Add New" button
+    const existingItems = historyList.querySelectorAll('.history-item, .empty-history, .history-error');
+    existingItems.forEach(item => item.remove());
+
     if (!edits || edits.length === 0) {
-        historyList.innerHTML = '<div class="empty-history"><p>No cloud edits yet</p></div>';
+        historyList.insertAdjacentHTML('beforeend', '<div class="empty-history"><p>No cloud edits yet</p></div>');
         return;
     }
 
-    historyList.innerHTML = edits.map(edit => `
+    const historyHtml = edits.map(edit => `
         <div class="history-item" data-id="${edit.id}" data-path="${edit.name}">
             <img src="${edit.image}" alt="Cloud Edit" crossorigin="anonymous">
             <div class="history-item-info">
@@ -393,6 +404,8 @@ async function loadHistory() {
             </div>
         </div>
     `).join('');
+
+    historyList.insertAdjacentHTML('beforeend', historyHtml);
 
     // Re-initialize icons
     if (window.lucide) window.lucide.createIcons();
