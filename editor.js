@@ -49,7 +49,8 @@ const presets = {
  */
 class CloudStorage {
     constructor() {
-        this.apiBase = 'http://localhost:3000'; // Change this to your Render URL later
+        // Use current domain for API calls (works for both localhost and Render)
+        this.apiBase = window.location.origin;
         this.isOnline = false;
     }
 
