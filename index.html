@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,8 +8,11 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body>
     <div class="app-container">
         <header>
@@ -30,39 +34,115 @@
 
                 <div class="controls-panel">
                     <div class="control-group">
-                        <h3>Basic Adjustments</h3>
-                        <div class="slider-item">
-                            <label for="contrast">Contrast</label>
-                            <input type="range" id="contrast" min="0" max="200" value="100">
-                            <span class="value" id="contrastVal">100%</span>
-                        </div>
-                        <div class="slider-item">
-                            <label for="saturation">Saturation</label>
-                            <input type="range" id="saturation" min="0" max="200" value="100">
-                            <span class="value" id="saturationVal">100%</span>
+                        <h3>Presets</h3>
+                        <div class="presets-grid">
+                            <button class="preset-card active" data-preset="none">
+                                <div class="preset-preview none"></div>
+                                <span>Original</span>
+                            </button>
+                            <button class="preset-card" data-preset="bold">
+                                <div class="preset-preview bold"></div>
+                                <span>Bold</span>
+                            </button>
+                            <button class="preset-card" data-preset="vivid">
+                                <div class="preset-preview vivid"></div>
+                                <span>Vivid</span>
+                            </button>
+                            <button class="preset-card" data-preset="vintage">
+                                <div class="preset-preview vintage"></div>
+                                <span>Vintage</span>
+                            </button>
+                            <button class="preset-card" data-preset="bw">
+                                <div class="preset-preview bw"></div>
+                                <span>B&W</span>
+                            </button>
+                            <button class="preset-card" data-preset="cinematic">
+                                <div class="preset-preview cinematic"></div>
+                                <span>Cinematic</span>
+                            </button>
+                            <button class="preset-card" data-preset="golden">
+                                <div class="preset-preview golden"></div>
+                                <span>Golden</span>
+                            </button>
+                            <button class="preset-card" data-preset="teal">
+                                <div class="preset-preview teal"></div>
+                                <span>Teal & Orange</span>
+                            </button>
+                            <button class="preset-card" data-preset="moody">
+                                <div class="preset-preview moody"></div>
+                                <span>Moody</span>
+                            </button>
+                            <button class="preset-card" data-preset="dreamy">
+                                <div class="preset-preview dreamy"></div>
+                                <span>Dreamy</span>
+                            </button>
+                            <button class="preset-card" data-preset="highkey">
+                                <div class="preset-preview highkey"></div>
+                                <span>High Key</span>
+                            </button>
+                            <button class="preset-card" data-preset="gritty">
+                                <div class="preset-preview gritty"></div>
+                                <span>Gritty</span>
+                            </button>
+                            <button class="preset-card" data-preset="cold">
+                                <div class="preset-preview cold"></div>
+                                <span>Cold</span>
+                            </button>
+                            <button class="preset-card" data-preset="retro">
+                                <div class="preset-preview retro"></div>
+                                <span>Retro</span>
+                            </button>
+                            <button class="preset-card" data-preset="neon">
+                                <div class="preset-preview neon"></div>
+                                <span>Neon</span>
+                            </button>
                         </div>
                     </div>
 
                     <div class="control-group">
-                        <h3>Tone Controls</h3>
+                        <h3>Adjustments</h3>
                         <div class="slider-item">
-                            <label for="highlights">Highlights</label>
-                            <input type="range" id="highlights" min="-100" max="100" value="0">
-                            <span class="value" id="highlightsVal">0</span>
+                            <label for="contrast">
+                                <span class="label-text"><i data-lucide="contrast"></i> Contrast</span>
+                                <span class="value" id="contrastVal">100%</span>
+                            </label>
+                            <input type="range" id="contrast" min="0" max="200" value="100">
                         </div>
                         <div class="slider-item">
-                            <label for="shadows">Shadows</label>
+                            <label for="saturation">
+                                <span class="label-text"><i data-lucide="droplets"></i> Saturation</span>
+                                <span class="value" id="saturationVal">100%</span>
+                            </label>
+                            <input type="range" id="saturation" min="0" max="200" value="100">
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h3>Tone</h3>
+                        <div class="slider-item">
+                            <label for="highlights">
+                                <span class="label-text"><i data-lucide="sun"></i> Highlights</span>
+                                <span class="value" id="highlightsVal">0</span>
+                            </label>
+                            <input type="range" id="highlights" min="-100" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label for="shadows">
+                                <span class="label-text"><i data-lucide="moon"></i> Shadows</span>
+                                <span class="value" id="shadowsVal">0</span>
+                            </label>
                             <input type="range" id="shadows" min="-100" max="100" value="0">
-                            <span class="value" id="shadowsVal">0</span>
                         </div>
                     </div>
 
                     <div class="control-group">
                         <h3>Details</h3>
                         <div class="slider-item">
-                            <label for="sharpen">Sharpen</label>
+                            <label for="sharpen">
+                                <span class="label-text"><i data-lucide="zap"></i> Sharpen</span>
+                                <span class="value" id="sharpenVal">0</span>
+                            </label>
                             <input type="range" id="sharpen" min="0" max="100" value="0">
-                            <span class="value" id="sharpenVal">0</span>
                         </div>
                     </div>
 
@@ -75,5 +155,9 @@
         </main>
     </div>
     <script src="editor.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
+
 </html>

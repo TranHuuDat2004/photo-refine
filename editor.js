@@ -23,6 +23,26 @@ const valDisplays = {
     sharpen: document.getElementById('sharpenVal')
 };
 
+const presetCards = document.querySelectorAll('.preset-card');
+
+const presets = {
+    none: { contrast: 100, saturation: 100, highlights: 0, shadows: 0, sharpen: 0 },
+    bold: { contrast: 112, saturation: 120, highlights: -10, shadows: -5, sharpen: 35 },
+    vivid: { contrast: 110, saturation: 140, highlights: 5, shadows: 0, sharpen: 20 },
+    vintage: { contrast: 95, saturation: 70, highlights: 20, shadows: 15, sharpen: 0 },
+    bw: { contrast: 120, saturation: 0, highlights: 10, shadows: -10, sharpen: 25 },
+    cinematic: { contrast: 115, saturation: 85, highlights: -15, shadows: 5, sharpen: 30 },
+    golden: { contrast: 105, saturation: 125, highlights: 25, shadows: 0, sharpen: 15 },
+    teal: { contrast: 110, saturation: 110, highlights: -10, shadows: -20, sharpen: 20 },
+    moody: { contrast: 130, saturation: 70, highlights: -25, shadows: -15, sharpen: 10 },
+    dreamy: { contrast: 85, saturation: 90, highlights: 35, shadows: 20, sharpen: 0 },
+    highkey: { contrast: 90, saturation: 105, highlights: 45, shadows: 30, sharpen: 5 },
+    gritty: { contrast: 140, saturation: 60, highlights: -5, shadows: -20, sharpen: 60 },
+    cold: { contrast: 108, saturation: 80, highlights: 0, shadows: 5, sharpen: 15 },
+    retro: { contrast: 95, saturation: 85, highlights: 15, shadows: 10, sharpen: 5 },
+    neon: { contrast: 125, saturation: 180, highlights: 10, shadows: 0, sharpen: 25 }
+};
+
 let originalImage = null;
 let currentImageData = null;
 
@@ -33,7 +53,7 @@ function init() {
 
 function setupEventListeners() {
     dropZone.addEventListener('click', () => imageInput.click());
-    
+
     imageInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) loadImage(file);
@@ -65,6 +85,32 @@ function setupEventListeners() {
 
     resetBtn.addEventListener('click', resetFilters);
     downloadBtn.addEventListener('click', downloadImage);
+
+    // Presets
+    presetCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const presetKey = card.dataset.preset;
+            applyPreset(presetKey);
+
+            // Toggle active class
+            presetCards.forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+        });
+    });
+}
+
+function applyPreset(key) {
+    const preset = presets[key];
+    if (!preset) return;
+
+    Object.keys(preset).forEach(attr => {
+        if (sliders[attr]) {
+            sliders[attr].value = preset[attr];
+            updateValueDisplay(attr);
+        }
+    });
+
+    applyFilters();
 }
 
 function updateValueDisplay(key) {
@@ -110,13 +156,15 @@ function setupCanvas(img) {
     ctx.drawImage(img, 0, 0, width, height);
 }
 
+
+
 function resetFilters() {
-    Object.keys(sliders).forEach(key => {
-        if (key === 'contrast' || key === 'saturation') sliders[key].value = 100;
-        else sliders[key].value = 0;
-        updateValueDisplay(key);
-    });
-    applyFilters();
+    applyPreset('none');
+
+    // Reset active preset card
+    presetCards.forEach(c => c.classList.remove('active'));
+    const originalCard = document.querySelector('[data-preset="none"]');
+    if (originalCard) originalCard.classList.add('active');
 }
 
 function applyFilters() {
@@ -139,7 +187,7 @@ function applyFilters() {
 
     if (highlights !== 0 || shadows !== 0 || sharpen > 0) {
         let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
+
         // Highlights & Shadows
         if (highlights !== 0 || shadows !== 0) {
             imageData = applyHighlightsShadows(imageData, highlights, shadows);
@@ -164,20 +212,20 @@ function applyHighlightsShadows(imageData, highlights, shadows) {
 
     for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
-        const g = data[i+1];
-        const b = data[i+2];
+        const g = data[i + 1];
+        const b = data[i + 2];
 
         // Relative luminance
         const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
         let multiplier = 1;
-        
+
         // Highlights (lum > 0.5)
         if (lum > 0.5 && highlights !== 0) {
             const weight = (lum - 0.5) * 2; // 0 to 1
             multiplier += hFactor * weight;
         }
-        
+
         // Shadows (lum < 0.5)
         if (lum < 0.5 && shadows !== 0) {
             const weight = (0.5 - lum) * 2; // 0 to 1
@@ -185,8 +233,8 @@ function applyHighlightsShadows(imageData, highlights, shadows) {
         }
 
         data[i] = Math.min(255, Math.max(0, r * multiplier));
-        data[i+1] = Math.min(255, Math.max(0, g * multiplier));
-        data[i+2] = Math.min(255, Math.max(0, b * multiplier));
+        data[i + 1] = Math.min(255, Math.max(0, g * multiplier));
+        data[i + 2] = Math.min(255, Math.max(0, b * multiplier));
     }
     return imageData;
 }
@@ -223,18 +271,18 @@ function applySharpen(imageData, amount) {
                     const kVal = kernel[(ky + 1) * 3 + (kx + 1)];
 
                     r += data[pIdx] * kVal;
-                    g += data[pIdx+1] * kVal;
-                    b += data[pIdx+2] * kVal;
+                    g += data[pIdx + 1] * kVal;
+                    b += data[pIdx + 2] * kVal;
                 }
             }
 
             output[idx] = r;
-            output[idx+1] = g;
-            output[idx+2] = b;
-            output[idx+3] = data[idx+3]; // alpha
+            output[idx + 1] = g;
+            output[idx + 2] = b;
+            output[idx + 3] = data[idx + 3]; // alpha
         }
     }
-    
+
     imageData.data.set(output);
     return imageData;
 }
