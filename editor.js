@@ -45,76 +45,81 @@ const presets = {
 };
 
 /**
- * IndexedDB Wrapper for Edit History
+ * Cloud Storage Manager (GitHub Bridge)
  */
-class HistoryDB {
+class CloudStorage {
     constructor() {
-        this.dbName = 'PhotoRefineDB';
-        this.version = 1;
-        this.storeName = 'edits';
-        this.db = null;
+        this.apiBase = 'http://localhost:3000'; // Change this to your Render URL later
+        this.isOnline = false;
     }
 
     async init() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName, this.version);
-            request.onupgradeneeded = (e) => {
-                const db = e.target.result;
-                if (!db.objectStoreNames.contains(this.storeName)) {
-                    db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
-                }
-            };
-            request.onsuccess = (e) => {
-                this.db = e.target.result;
-                resolve();
-            };
-            request.onerror = (e) => reject(e.target.error);
-        });
+        try {
+            const response = await fetch(this.apiBase);
+            if (response.ok) {
+                this.isOnline = true;
+                this.updateUI();
+            }
+        } catch (e) {
+            console.warn('Cloud Server offline. Using demo mode.');
+        }
+    }
+
+    updateUI() {
+        const status = document.getElementById('syncStatus');
+        if (this.isOnline && status) {
+            status.classList.add('online');
+            status.innerHTML = '<i data-lucide="cloud"></i> <span>Cloud Synced</span>';
+            if (window.lucide) window.lucide.createIcons();
+        }
     }
 
     async save(imageDataUrl) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction([this.storeName], 'readwrite');
-            const store = transaction.objectStore(this.storeName);
-            const entry = {
-                image: imageDataUrl,
-                timestamp: new Date().getTime()
-            };
-            const request = store.add(entry);
-            request.onsuccess = () => resolve();
-            request.onerror = (e) => reject(e.target.error);
-        });
+        if (!this.isOnline) return;
+        try {
+            const fileName = `edit_${new Date().getTime()}.png`;
+            const response = await fetch(`${this.apiBase}/upload`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageDataUrl, fileName })
+            });
+            return await response.json();
+        } catch (e) {
+            console.error('Cloud Save Error:', e);
+        }
     }
 
     async getAll() {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction([this.storeName], 'readonly');
-            const store = transaction.objectStore(this.storeName);
-            const request = store.getAll();
-            request.onsuccess = (e) => resolve(e.target.result.reverse()); // Newest first
-            request.onerror = (e) => reject(e.target.error);
-        });
+        if (!this.isOnline) return [];
+        try {
+            const response = await fetch(`${this.apiBase}/history`);
+            return await response.json();
+        } catch (e) {
+            console.error('Cloud Fetch Error:', e);
+            return [];
+        }
     }
 
-    async delete(id) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction([this.storeName], 'readwrite');
-            const store = transaction.objectStore(this.storeName);
-            const request = store.delete(id);
-            request.onsuccess = () => resolve();
-            request.onerror = (e) => reject(e.target.error);
-        });
+    async delete(id, path) {
+        if (!this.isOnline) return;
+        try {
+            await fetch(`${this.apiBase}/history/${id}?path=edits/${path}`, {
+                method: 'DELETE'
+            });
+        } catch (e) {
+            console.error('Cloud Delete Error:', e);
+        }
     }
 }
 
-const db = new HistoryDB();
+const cloud = new CloudStorage();
 
 let originalImage = null;
 let currentImageData = null;
 
 // Initialization
 async function init() {
-    await db.init();
+    await cloud.init();
     setupEventListeners();
     loadHistory();
 }
@@ -359,8 +364,10 @@ function downloadImage() {
     if (!originalImage) return;
     const dataUrl = canvas.toDataURL('image/png');
 
-    // Save to history before downloading
-    db.save(dataUrl).then(() => loadHistory());
+    // Save to Cloud before downloading
+    cloud.save(dataUrl).then(() => {
+        setTimeout(loadHistory, 1000); // Wait for GitHub to process
+    });
 
     const link = document.createElement('a');
     link.download = 'refined-photo.png';
@@ -369,25 +376,25 @@ function downloadImage() {
 }
 
 async function loadHistory() {
-    const edits = await db.getAll();
+    const edits = await cloud.getAll();
     if (!edits || edits.length === 0) {
-        historyList.innerHTML = '<div class="empty-history"><p>No recent edits yet</p></div>';
+        historyList.innerHTML = '<div class="empty-history"><p>No cloud edits yet</p></div>';
         return;
     }
 
     historyList.innerHTML = edits.map(edit => `
-        <div class="history-item" data-id="${edit.id}">
-            <img src="${edit.image}" alt="Recent Edit">
+        <div class="history-item" data-id="${edit.id}" data-path="${edit.name}">
+            <img src="${edit.image}" alt="Cloud Edit" crossorigin="anonymous">
             <div class="history-item-info">
                 <span>${new Date(edit.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                <button class="delete-history-btn" onclick="deleteHistoryItem(event, ${edit.id})">
+                <button class="delete-history-btn" onclick="deleteHistoryItem(event, '${edit.id}', '${edit.name}')">
                     <i data-lucide="trash-2"></i>
                 </button>
             </div>
         </div>
     `).join('');
 
-    // Re-initialize icons for the newly added buttons
+    // Re-initialize icons
     if (window.lucide) window.lucide.createIcons();
 
     // Add click listeners
@@ -395,12 +402,11 @@ async function loadHistory() {
     items.forEach(item => {
         item.addEventListener('click', () => {
             const img = new Image();
+            img.crossOrigin = "anonymous";
             img.onload = () => {
                 originalImage = img;
                 setupCanvas(img);
-                resetFilters(); // Reset sliders to default for the new loaded image
-
-                // Highlight active item
+                resetFilters();
                 items.forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
             };
@@ -409,10 +415,10 @@ async function loadHistory() {
     });
 }
 
-async function deleteHistoryItem(event, id) {
-    event.stopPropagation(); // Don't load the image when deleting
-    if (confirm('Delete this edit from history?')) {
-        await db.delete(id);
+async function deleteHistoryItem(event, id, path) {
+    event.stopPropagation();
+    if (confirm('Delete this from Cloud History?')) {
+        await cloud.delete(id, path);
         loadHistory();
     }
 }

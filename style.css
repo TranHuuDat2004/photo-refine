@@ -59,6 +59,28 @@ header p {
     font-weight: 500;
 }
 
+.sync-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: var(--input-bg);
+    padding: 4px 12px;
+    border-radius: 100px;
+}
+
+.sync-status.online {
+    color: #059669;
+    background: #ecfdf5;
+}
+
+.sync-status i {
+    width: 14px;
+    height: 14px;
+}
+
 main {
     flex: 1;
     padding: 2rem;
