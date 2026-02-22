@@ -1,0 +1,13 @@
+{
+    "name": "photo-refine-root",
+    "version": "1.0.0",
+    "description": "Root package for Render deployment",
+    "main": "server/index.js",
+    "scripts": {
+        "postinstall": "cd server && npm install",
+        "start": "node server/index.js"
+    },
+    "engines": {
+        "node": ">=22.0.0"
+    }
+}
