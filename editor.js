@@ -69,7 +69,7 @@ class CloudStorage {
         const status = document.getElementById('syncStatus');
         if (this.isOnline && status) {
             status.classList.add('online');
-            status.innerHTML = '<i data-lucide="cloud"></i> <span>Cloud Synced</span>';
+            status.innerHTML = '<i data-lucide="cloud"></i> <span>Connected to Cloud</span>';
             if (window.lucide) window.lucide.createIcons();
         }
     }
