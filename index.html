@@ -22,6 +22,18 @@
 
         <main>
             <div class="editor-layout">
+                <aside class="history-panel">
+                    <div class="panel-header">
+                        <h3><i data-lucide="history"></i> Recent Edits</h3>
+                    </div>
+                    <div id="historyList" class="history-list">
+                        <!-- History items will be injected here -->
+                        <div class="empty-history">
+                            <p>No recent edits yet</p>
+                        </div>
+                    </div>
+                </aside>
+
                 <div class="canvas-area">
                     <div class="canvas-wrapper">
                         <canvas id="mainCanvas"></canvas>

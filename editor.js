@@ -23,6 +23,7 @@ const valDisplays = {
     sharpen: document.getElementById('sharpenVal')
 };
 
+const historyList = document.getElementById('historyList');
 const presetCards = document.querySelectorAll('.preset-card');
 
 const presets = {
@@ -43,12 +44,79 @@ const presets = {
     neon: { contrast: 125, saturation: 180, highlights: 10, shadows: 0, sharpen: 25 }
 };
 
+/**
+ * IndexedDB Wrapper for Edit History
+ */
+class HistoryDB {
+    constructor() {
+        this.dbName = 'PhotoRefineDB';
+        this.version = 1;
+        this.storeName = 'edits';
+        this.db = null;
+    }
+
+    async init() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, this.version);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(this.storeName)) {
+                    db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            request.onsuccess = (e) => {
+                this.db = e.target.result;
+                resolve();
+            };
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    async save(imageDataUrl) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([this.storeName], 'readwrite');
+            const store = transaction.objectStore(this.storeName);
+            const entry = {
+                image: imageDataUrl,
+                timestamp: new Date().getTime()
+            };
+            const request = store.add(entry);
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    async getAll() {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([this.storeName], 'readonly');
+            const store = transaction.objectStore(this.storeName);
+            const request = store.getAll();
+            request.onsuccess = (e) => resolve(e.target.result.reverse()); // Newest first
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    async delete(id) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([this.storeName], 'readwrite');
+            const store = transaction.objectStore(this.storeName);
+            const request = store.delete(id);
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+}
+
+const db = new HistoryDB();
+
 let originalImage = null;
 let currentImageData = null;
 
 // Initialization
-function init() {
+async function init() {
+    await db.init();
     setupEventListeners();
+    loadHistory();
 }
 
 function setupEventListeners() {
@@ -289,10 +357,64 @@ function applySharpen(imageData, amount) {
 
 function downloadImage() {
     if (!originalImage) return;
+    const dataUrl = canvas.toDataURL('image/png');
+
+    // Save to history before downloading
+    db.save(dataUrl).then(() => loadHistory());
+
     const link = document.createElement('a');
     link.download = 'refined-photo.png';
-    link.href = canvas.toDataURL();
+    link.href = dataUrl;
     link.click();
+}
+
+async function loadHistory() {
+    const edits = await db.getAll();
+    if (!edits || edits.length === 0) {
+        historyList.innerHTML = '<div class="empty-history"><p>No recent edits yet</p></div>';
+        return;
+    }
+
+    historyList.innerHTML = edits.map(edit => `
+        <div class="history-item" data-id="${edit.id}">
+            <img src="${edit.image}" alt="Recent Edit">
+            <div class="history-item-info">
+                <span>${new Date(edit.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <button class="delete-history-btn" onclick="deleteHistoryItem(event, ${edit.id})">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+
+    // Re-initialize icons for the newly added buttons
+    if (window.lucide) window.lucide.createIcons();
+
+    // Add click listeners
+    const items = historyList.querySelectorAll('.history-item');
+    items.forEach(item => {
+        item.addEventListener('click', () => {
+            const img = new Image();
+            img.onload = () => {
+                originalImage = img;
+                setupCanvas(img);
+                resetFilters(); // Reset sliders to default for the new loaded image
+
+                // Highlight active item
+                items.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+            };
+            img.src = item.querySelector('img').src;
+        });
+    });
+}
+
+async function deleteHistoryItem(event, id) {
+    event.stopPropagation(); // Don't load the image when deleting
+    if (confirm('Delete this edit from history?')) {
+        await db.delete(id);
+        loadHistory();
+    }
 }
 
 init();
