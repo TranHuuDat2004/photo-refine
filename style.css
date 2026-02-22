@@ -578,6 +578,16 @@ input[type="range"]::-webkit-slider-thumb:hover {
         padding: 1rem;
         gap: 1rem;
     }
+
+    /* Compact presets for tablet/desktop-small */
+    .presets-grid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 0.5rem;
+    }
+
+    .preset-card {
+        padding: 0.25rem;
+    }
 }
 
 /* Tablet (Portrait) */
@@ -640,8 +650,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
     }
 
     .presets-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 0.5rem;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 0.4rem;
+    }
+
+    .preset-card {
+        padding: 0.25rem;
     }
 
     .history-list {
