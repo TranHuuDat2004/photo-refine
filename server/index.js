@@ -4,6 +4,11 @@ const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
 
+const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
+const User = require('./models/User');
+const Edit = require('./models/Edit');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -20,6 +25,35 @@ app.use(express.static(path.join(__dirname, '../')));
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const REPO = process.env.GITHUB_REPO;
 const BRANCH = process.env.GITHUB_BRANCH || 'main';
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/photorefine';
+
+// Connect to MongoDB
+mongoose.connect(MONGO_URI)
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(err => console.error('MongoDB connection error:', err));
+
+// Auth Middleware
+const auth = async (req, res, next) => {
+    try {
+        const authHeader = req.header('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        const token = authHeader.replace('Bearer ', '');
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = await User.findById(decoded.id).select('-password');
+
+        if (!req.user) {
+            throw new Error();
+        }
+
+        next();
+    } catch (error) {
+        res.status(401).json({ error: 'Please authenticate.' });
+    }
+};
 
 // Health check
 app.get('/health', (req, res) => res.send('PhotoRefine Cloud Sync Server is running!'));
@@ -29,8 +63,56 @@ app.get('/', (req, res) => {
     res.render('index');
 });
 
-// Upload image to GitHub
-app.post('/upload', async (req, res) => {
+// --- Auth Routes ---
+
+app.post('/api/register', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const userExists = await User.findOne({ username });
+
+        if (userExists) {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
+
+        const user = await User.create({ username, password });
+        const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '30d' });
+
+        res.status(201).json({
+            _id: user._id,
+            username: user.username,
+            token
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ error: 'Registration failed', details: error.message });
+    }
+});
+
+app.post('/api/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await User.findOne({ username });
+
+        if (user && (await user.matchPassword(password))) {
+            const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '30d' });
+            res.json({
+                _id: user._id,
+                username: user.username,
+                token
+            });
+        } else {
+            res.status(401).json({ error: 'Invalid username or password' });
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Login failed', details: error.message });
+    }
+});
+
+// --- Editor Routes (Protected) ---
+
+// Upload image to GitHub & Save Reference to MongoDB
+app.post('/upload', auth, async (req, res) => {
     try {
         const { image, fileName } = req.body;
         if (!image || !fileName) {
@@ -39,13 +121,13 @@ app.post('/upload', async (req, res) => {
 
         // Remove data:image/png;base64, prefix
         const base64Content = image.split(',')[1];
-        const path = `edits/${fileName}`;
-        const url = `https://api.github.com/repos/${REPO}/contents/${path}`;
+        const githubPath = `edits/${req.user._id}/${fileName}`; // Scope path by user ID
+        const url = `https://api.github.com/repos/${REPO}/contents/${githubPath}`;
 
-        console.log(`Uploading to GitHub: ${path}`);
+        console.log(`Uploading to GitHub: ${githubPath}`);
 
         const response = await axios.put(url, {
-            message: `Save edit: ${fileName}`,
+            message: `Save edit for user ${req.user.username}: ${fileName}`,
             content: base64Content,
             branch: BRANCH
         }, {
@@ -55,80 +137,89 @@ app.post('/upload', async (req, res) => {
             }
         });
 
+        const githubUrl = response.data.content.download_url;
+        const githubSha = response.data.content.sha;
+
+        // Save to MongoDB
+        const edit = await Edit.create({
+            userId: req.user._id,
+            fileName: fileName,
+            githubUrl: githubUrl,
+            githubSha: githubSha
+        });
+
         res.json({
             success: true,
-            url: response.data.content.download_url,
-            id: response.data.content.sha
+            url: githubUrl,
+            id: edit._id,
+            githubSha: githubSha
         });
     } catch (error) {
-        console.error('GitHub Upload Error:', error.response?.data || error.message);
-        res.status(500).json({ error: 'Failed to upload to GitHub', details: error.response?.data });
+        console.error('Upload Error:', error.response?.data || error.message);
+        res.status(500).json({ error: 'Failed to upload photo', details: error.response?.data || error.message });
     }
 });
 
-// Get history from GitHub
-app.get('/history', async (req, res) => {
+// Get user's history from MongoDB
+app.get('/history', auth, async (req, res) => {
     try {
-        const url = `https://api.github.com/repos/${REPO}/contents/edits?ref=${BRANCH}`;
-        const response = await axios.get(url, {
-            headers: {
-                Authorization: `token ${GITHUB_TOKEN}`,
-                Accept: 'application/vnd.github.v3+json'
-            }
-        });
+        // Find edits for this specific user, sorted from newest to oldest
+        const edits = await Edit.find({ userId: req.user._id }).sort({ createdAt: -1 });
 
-        // Map files to history items
-        // Filter for images and sort by name (which includes timestamp)
-        const history = response.data
-            .filter(file => file.name.match(/\.(png|jpg|jpeg)$/i))
-            .map(file => ({
-                id: file.sha,
-                image: file.download_url,
-                name: file.name,
-                // Extract timestamp from filename: edit_1708612345678.png
-                timestamp: parseInt(file.name.split('_')[1]) || new Date().getTime()
-            }))
-            .sort((a, b) => b.timestamp - a.timestamp);
+        const history = edits.map(edit => ({
+            id: edit._id,                // MongoDB ID
+            image: edit.githubUrl,       // GitHub raw URL
+            name: edit.fileName,         // Original file name
+            githubSha: edit.githubSha,   // Needed for deletions
+            timestamp: new Date(edit.createdAt).getTime()
+        }));
 
         res.json(history);
     } catch (error) {
-        if (error.response?.status === 404) {
-            return res.json([]); // Folder doesn't exist yet
-        }
-        console.error('GitHub Fetch Error:', error.response?.data || error.message);
-        res.status(500).json({ error: 'Failed to fetch history from GitHub' });
+        console.error('Fetch History Error:', error.message);
+        res.status(500).json({ error: 'Failed to fetch history' });
     }
 });
 
-// Delete from GitHub
-app.delete('/history/:id', async (req, res) => {
+// Delete from GitHub and MongoDB
+app.delete('/history/:id', auth, async (req, res) => {
     try {
         const { id } = req.params;
-        const { path } = req.query; // Need path to delete
 
-        const url = `https://api.github.com/repos/${REPO}/contents/${path}`;
+        // Find the edit and verify it belongs to the user
+        const edit = await Edit.findOne({ _id: id, userId: req.user._id });
+        if (!edit) {
+            return res.status(404).json({ error: 'Edit not found or unauthorized' });
+        }
 
-        // GitHub delete requires the SHA
-        const getFile = await axios.get(url, {
-            headers: { Authorization: `token ${GITHUB_TOKEN}` }
-        });
+        const githubPath = `edits/${req.user._id}/${edit.fileName}`;
+        const url = `https://api.github.com/repos/${REPO}/contents/${githubPath}`;
 
-        await axios.delete(url, {
-            headers: {
-                Authorization: `token ${GITHUB_TOKEN}`,
-                Accept: 'application/vnd.github.v3+json'
-            },
-            data: {
-                message: `Delete edit: ${path}`,
-                sha: getFile.data.sha,
-                branch: BRANCH
-            }
-        });
+        // Delete from GitHub
+        try {
+            await axios.delete(url, {
+                headers: {
+                    Authorization: `token ${GITHUB_TOKEN}`,
+                    Accept: 'application/vnd.github.v3+json'
+                },
+                data: {
+                    message: `Delete edit: ${githubPath}`,
+                    sha: edit.githubSha,
+                    branch: BRANCH
+                }
+            });
+        } catch (githubError) {
+            console.error('GitHub Delete Error (might already be deleted):', githubError.response?.data || githubError.message);
+            // Continue to delete from DB even if GitHub delete fails
+        }
+
+        // Delete from MongoDB
+        await Edit.deleteOne({ _id: id });
 
         res.json({ success: true });
     } catch (error) {
-        console.error('GitHub Delete Error:', error.response?.data || error.message);
-        res.status(500).json({ error: 'Failed to delete from GitHub' });
+        console.error('Delete Error:', error.message);
+        res.status(500).json({ error: 'Failed to delete edit' });
     }
 });
 

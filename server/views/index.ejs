@@ -17,12 +17,46 @@
     <div class="app-container">
         <header>
             <h1>Photo<span>Refine</span></h1>
+            <div class="auth-controls" id="authControls">
+                <button id="loginBtnBtn" class="secondary-btn btn-small">Login</button>
+                <button id="registerBtnBtn" class="primary-btn btn-small">Register</button>
+            </div>
+            <div class="user-info hidden" id="userInfo">
+                <span id="userNameDisplay"></span>
+                <button id="logoutBtn" class="secondary-btn btn-small logout-btn">
+                    <i data-lucide="log-out"></i>
+                </button>
+            </div>
             <div class="sync-status" id="syncStatus">
                 <i data-lucide="cloud-off"></i>
                 <span>Offline Mode</span>
             </div>
             <p>Professional Image Processing Powered by HTML5 & Cloud</p>
         </header>
+
+        <!-- Auth Modals -->
+        <div id="authModal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Login to Cloud</h2>
+                    <button id="closeModalBtn" class="close-btn"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <form id="authForm">
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" required minlength="3" placeholder="Enter username">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" required minlength="6" placeholder="Enter password">
+                        </div>
+                        <div id="authError" class="auth-error hidden"></div>
+                        <button type="submit" id="submitAuthBtn" class="primary-btn w-full">Login</button>
+                    </form>
+                </div>
+            </div>
+        </div>
 
         <main>
             <div class="editor-layout">

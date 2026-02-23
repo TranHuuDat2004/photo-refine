@@ -45,18 +45,19 @@ const presets = {
 };
 
 /**
- * Cloud Storage Manager (GitHub Bridge)
+ * Cloud Storage Manager (MongoDB + GitHub Bridge)
  */
 class CloudStorage {
     constructor() {
-        // Use current domain for API calls (works for both localhost and Render)
         this.apiBase = window.location.origin;
         this.isOnline = false;
+        this.token = localStorage.getItem('photo_refine_token');
+        this.user = JSON.parse(localStorage.getItem('photo_refine_user') || 'null');
     }
 
     async init() {
         try {
-            const response = await fetch(this.apiBase);
+            const response = await fetch(`${this.apiBase}/health`);
             if (response.ok) {
                 this.isOnline = true;
                 this.updateUI();
@@ -66,34 +67,96 @@ class CloudStorage {
         }
     }
 
+    getHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+        return headers;
+    }
+
+    setAuth(user, token) {
+        this.user = user;
+        this.token = token;
+        localStorage.setItem('photo_refine_user', JSON.stringify(user));
+        localStorage.setItem('photo_refine_token', token);
+        this.updateUI();
+    }
+
+    logout() {
+        this.user = null;
+        this.token = null;
+        localStorage.removeItem('photo_refine_user');
+        localStorage.removeItem('photo_refine_token');
+        this.updateUI();
+
+        // Clear history UI
+        const historyList = document.getElementById('historyList');
+        const existingItems = historyList.querySelectorAll('.history-item, .empty-history, .history-error');
+        existingItems.forEach(item => item.remove());
+        historyList.insertAdjacentHTML('beforeend', '<div class="empty-history"><p>Please login to view edits</p></div>');
+    }
+
     updateUI() {
         const status = document.getElementById('syncStatus');
+        const authControls = document.getElementById('authControls');
+        const userInfo = document.getElementById('userInfo');
+        const userNameDisplay = document.getElementById('userNameDisplay');
+
         if (this.isOnline && status) {
-            status.classList.add('online');
-            status.innerHTML = '<i data-lucide="cloud"></i> <span>Connected to Cloud</span>';
+            if (this.token && this.user) {
+                status.classList.add('online');
+                status.innerHTML = '<i data-lucide="cloud"></i> <span>Connected</span>';
+
+                authControls.classList.add('hidden');
+                userInfo.classList.remove('hidden');
+                userNameDisplay.textContent = this.user.username;
+            } else {
+                status.classList.remove('online');
+                status.innerHTML = '<i data-lucide="cloud-off"></i> <span>Login Required</span>';
+
+                authControls.classList.remove('hidden');
+                userInfo.classList.add('hidden');
+            }
             if (window.lucide) window.lucide.createIcons();
         }
     }
 
     async save(imageDataUrl) {
-        if (!this.isOnline) return;
+        if (!this.isOnline || !this.token) {
+            alert('Please login to save to cloud');
+            return;
+        }
         try {
             const fileName = `edit_${new Date().getTime()}.png`;
             const response = await fetch(`${this.apiBase}/upload`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getHeaders(),
                 body: JSON.stringify({ image: imageDataUrl, fileName })
             });
+
+            if (!response.ok) {
+                if (response.status === 401) this.logout();
+                throw new Error('Upload failed');
+            }
             return await response.json();
         } catch (e) {
             console.error('Cloud Save Error:', e);
+            throw e;
         }
     }
 
     async getAll() {
-        if (!this.isOnline) return [];
+        if (!this.isOnline || !this.token) return [];
         try {
-            const response = await fetch(`${this.apiBase}/history`);
+            const response = await fetch(`${this.apiBase}/history`, {
+                headers: this.getHeaders()
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) this.logout();
+                return [];
+            }
             return await response.json();
         } catch (e) {
             console.error('Cloud Fetch Error:', e);
@@ -101,12 +164,17 @@ class CloudStorage {
         }
     }
 
-    async delete(id, path) {
-        if (!this.isOnline) return;
+    async delete(id) {
+        if (!this.isOnline || !this.token) return;
         try {
-            await fetch(`${this.apiBase}/history/${id}?path=edits/${path}`, {
-                method: 'DELETE'
+            const response = await fetch(`${this.apiBase}/history/${id}`, {
+                method: 'DELETE',
+                headers: this.getHeaders()
             });
+
+            if (!response.ok && response.status === 401) {
+                this.logout();
+            }
         } catch (e) {
             console.error('Cloud Delete Error:', e);
         }
@@ -118,14 +186,95 @@ const cloud = new CloudStorage();
 let originalImage = null;
 let currentImageData = null;
 
+// Auth Modal Logic
+const authModal = document.getElementById('authModal');
+const authForm = document.getElementById('authForm');
+const modalTitle = document.getElementById('modalTitle');
+const authError = document.getElementById('authError');
+let isLoginMode = true;
+
+function showAuthModal(loginMode = true) {
+    isLoginMode = loginMode;
+    modalTitle.textContent = loginMode ? 'Login to Cloud' : 'Register New Account';
+    document.getElementById('submitAuthBtn').textContent = loginMode ? 'Login' : 'Register';
+    authError.classList.add('hidden');
+    authForm.reset();
+    authModal.classList.remove('hidden');
+}
+
+function closeAuthModal() {
+    authModal.classList.add('hidden');
+}
+
+async function handleAuthSubmit(e) {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('submitAuthBtn');
+
+    btn.disabled = true;
+    btn.textContent = 'Please wait...';
+    authError.classList.add('hidden');
+
+    try {
+        const endpoint = isLoginMode ? '/api/login' : '/api/register';
+        const response = await fetch(`${cloud.apiBase}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            cloud.setAuth({ id: data._id, username: data.username }, data.token);
+            closeAuthModal();
+            loadHistory();
+        } else {
+            authError.textContent = data.error || 'Authentication failed';
+            authError.classList.remove('hidden');
+        }
+    } catch (err) {
+        authError.textContent = 'Network error occurred';
+        authError.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = isLoginMode ? 'Login' : 'Register';
+    }
+}
+
 // Initialization
 async function init() {
     await cloud.init();
     setupEventListeners();
-    loadHistory();
+    if (cloud.token) {
+        loadHistory();
+    } else {
+        const historyList = document.getElementById('historyList');
+        const existingItems = historyList.querySelectorAll('.history-item, .empty-history, .history-error');
+        existingItems.forEach(item => item.remove());
+        historyList.insertAdjacentHTML('beforeend', '<div class="empty-history"><p>Please login to view edits</p></div>');
+    }
 }
 
 function setupEventListeners() {
+    // Auth Event Listeners
+    const loginBtn = document.getElementById('loginBtnBtn');
+    const registerBtn = document.getElementById('registerBtnBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    if (loginBtn) loginBtn.addEventListener('click', () => showAuthModal(true));
+    if (registerBtn) registerBtn.addEventListener('click', () => showAuthModal(false));
+    if (logoutBtn) logoutBtn.addEventListener('click', () => cloud.logout());
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeAuthModal);
+    if (authForm) authForm.addEventListener('submit', handleAuthSubmit);
+
+    // Close modal on outside click
+    window.addEventListener('click', (e) => {
+        if (e.target === authModal) closeAuthModal();
+    });
+
     const historyAddNew = document.getElementById('historyAddNew');
     if (historyAddNew) {
         historyAddNew.addEventListener('click', () => imageInput.click());
@@ -413,7 +562,7 @@ async function loadHistory() {
             <img src="${edit.image}" alt="Cloud Edit" crossorigin="anonymous">
             <div class="history-item-info">
                 <span>${new Date(edit.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                <button class="delete-history-btn" onclick="deleteHistoryItem(event, '${edit.id}', '${edit.name}')">
+                <button class="delete-history-btn" onclick="deleteHistoryItem(event, '${edit.id}')">
                     <i data-lucide="trash-2"></i>
                 </button>
             </div>
@@ -443,10 +592,10 @@ async function loadHistory() {
     });
 }
 
-async function deleteHistoryItem(event, id, path) {
+async function deleteHistoryItem(event, id) {
     event.stopPropagation();
     if (confirm('Delete this from Cloud History?')) {
-        await cloud.delete(id, path);
+        await cloud.delete(id);
         loadHistory();
     }
 }
