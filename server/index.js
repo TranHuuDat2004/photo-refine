@@ -29,8 +29,16 @@ const BRANCH = process.env.GITHUB_BRANCH || 'main';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/photorefine';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_REDIRECT_URI = process.env.NODE_ENV === 'production'
+    ? 'https://photo-refine.onrender.com/login'
+    : 'http://localhost:3000/login';
 
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI
+);
 
 // Connect to MongoDB
 mongoose.connect(MONGO_URI)
@@ -67,11 +75,88 @@ app.get('/', (req, res) => {
     res.render('index');
 });
 
-// Render Login Page
-app.get('/login', (req, res) => {
+// Render Login Page or Handle Google OAuth Callback
+app.get('/login', async (req, res) => {
+    const code = req.query.code;
+    const error = req.query.error;
+
+    if (error) {
+        return res.send(`<script>alert('Google Login Failed: ${error}'); window.location.href='/login';</script>`);
+    }
+
+    if (code) {
+        try {
+            const { tokens } = await googleClient.getToken(code);
+            googleClient.setCredentials(tokens);
+
+            // Fetch user info using the access token
+            const userInfoRes = await googleClient.request({ url: 'https://www.googleapis.com/oauth2/v3/userinfo' });
+            const { sub: googleId, email, name, picture } = userInfoRes.data;
+
+            // Find existing user by googleId or email
+            let user = await User.findOne({
+                $or: [{ googleId }, { email }]
+            });
+
+            if (user) {
+                let needsSave = false;
+                if (!user.googleId) { user.googleId = googleId; needsSave = true; }
+                if (!user.profilePicture && picture) { user.profilePicture = picture; needsSave = true; }
+                if (needsSave) await user.save();
+            } else {
+                let baseUsername = name.replace(/\s+/g, '').toLowerCase();
+                let uniqueUsername = baseUsername;
+                let counter = 1;
+
+                while (await User.findOne({ username: uniqueUsername })) {
+                    uniqueUsername = `${baseUsername}${counter}`;
+                    counter++;
+                }
+
+                user = await User.create({
+                    username: uniqueUsername,
+                    email: email,
+                    googleId: googleId,
+                    profilePicture: picture
+                });
+            }
+
+            const appToken = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '30d' });
+
+            return res.send(`
+                <script>
+                    localStorage.setItem('photo_refine_user', JSON.stringify({
+                        id: '${user._id}',
+                        username: '${user.username}',
+                        profilePicture: '${user.profilePicture || ''}'
+                    }));
+                    localStorage.setItem('photo_refine_token', '${appToken}');
+                    window.location.href = '/';
+                </script>
+            `);
+
+        } catch (err) {
+            console.error('Google Auth callback error:', err);
+            return res.send(`<script>alert('Failed to authenticate with Google Server'); window.location.href='/login';</script>`);
+        }
+    }
+
     res.render('login', {
-        GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || ''
+        GOOGLE_CLIENT_ID: GOOGLE_CLIENT_ID || ''
     });
+});
+
+// Generate Google OAuth URL endpoint
+app.get('/api/auth/google/url', (req, res) => {
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+        return res.status(500).json({ error: 'Google Auth is not fully configured.' });
+    }
+    const url = googleClient.generateAuthUrl({
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: ['https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email']
+    });
+    res.json({ url });
 });
 
 // --- Auth Routes ---

@@ -10,8 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Google Identity Services (loaded async if needed) -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -86,7 +84,6 @@
     </div>
 
     <script>
-        window.GOOGLE_CLIENT_ID = "<%= GOOGLE_CLIENT_ID %>";
         lucide.createIcons();
 
         // Auth Logic specifically for this page
@@ -114,75 +111,28 @@
             authError.classList.add('hidden');
         }
 
-        let googleTokenClient;
-
-        function triggerGoogleLogin() {
+        async function triggerGoogleLogin() {
             authError.classList.add('hidden');
-            if (typeof google === 'undefined') {
-                authError.textContent = 'Google SDK not loaded yet. Please try again.';
-                authError.classList.remove('hidden');
-                return;
-            }
-            if (!googleTokenClient && window.GOOGLE_CLIENT_ID) {
-                googleTokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: window.GOOGLE_CLIENT_ID,
-                    scope: 'email profile openid',
-                    callback: handleGoogleAccessToken
-                });
-            }
-            if (googleTokenClient) {
-                googleTokenClient.requestAccessToken();
-            } else {
-                authError.textContent = 'Google Client ID is missing.';
-                authError.classList.remove('hidden');
-            }
-        }
-
-        async function handleGoogleAccessToken(tokenResponse) {
-            const btn = document.getElementById('submitAuthBtn');
+            const btn = document.querySelector('.auth-google-btn');
             btn.disabled = true;
-            btn.textContent = 'Verifying...';
+            btn.style.opacity = '0.7';
 
-            if (tokenResponse && tokenResponse.access_token) {
-                try {
-                    // Fetch user info using the access token since we skipped ID Token flow
-                    const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                        headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
-                    });
-                    const googleUser = await userInfoRes.json();
-
-                    // Send the resolved google user data to our backend instead of verifying an ID token
-                    const res = await fetch('/api/auth/google/custom', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            googleId: googleUser.sub,
-                            email: googleUser.email,
-                            name: googleUser.name,
-                            picture: googleUser.picture
-                        })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        localStorage.setItem('photo_refine_user', JSON.stringify({
-                            id: data._id, username: data.username, profilePicture: data.profilePicture
-                        }));
-                        localStorage.setItem('photo_refine_token', data.token);
-                        window.location.href = '/';
-                    } else {
-                        authError.textContent = data.error || 'Failed';
-                        authError.classList.remove('hidden');
-                    }
-                } catch (err) {
-                    authError.textContent = 'Network error contacting server.';
+            try {
+                const res = await fetch('/api/auth/google/url');
+                const data = await res.json();
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    authError.textContent = data.error || 'Failed to generate Google Login URL.';
                     authError.classList.remove('hidden');
-                } finally {
                     btn.disabled = false;
-                    btn.textContent = isLoginMode ? 'Login' : 'Register';
+                    btn.style.opacity = '1';
                 }
-            } else {
+            } catch (err) {
+                authError.textContent = 'Server connection error. Please try again.';
+                authError.classList.remove('hidden');
                 btn.disabled = false;
-                btn.textContent = isLoginMode ? 'Login' : 'Register';
+                btn.style.opacity = '1';
             }
         }
 
