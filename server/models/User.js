@@ -12,14 +12,33 @@ const UserSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, 'Please provide a password'],
+        required: function () {
+            // Password is only required if they are NOT signing in via Google
+            return !this.googleId;
+        },
         minlength: [6, 'Password must be at least 6 characters long']
+    },
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true // Allows multiple null/undefined values
+    },
+    email: {
+        type: String,
+        unique: true,
+        sparse: true,
+        trim: true,
+        lowercase: true
+    },
+    profilePicture: {
+        type: String
     }
 }, { timestamps: true });
 
 // Hash password before saving to database
 UserSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) {
+    // Only hash if password exists and is modified
+    if (!this.isModified('password') || !this.password) {
         return next();
     }
     const salt = await bcrypt.genSalt(10);

@@ -200,10 +200,58 @@ function showAuthModal(loginMode = true) {
     authError.classList.add('hidden');
     authForm.reset();
     authModal.classList.remove('hidden');
+
+    // Render Google Button if SDK is loaded
+    if (window.google && window.GOOGLE_CLIENT_ID) {
+        google.accounts.id.initialize({
+            client_id: window.GOOGLE_CLIENT_ID,
+            callback: handleGoogleLogin
+        });
+        google.accounts.id.renderButton(
+            document.getElementById('googleButtonWrapper'),
+            { theme: 'outline', size: 'large', width: 350 }
+        );
+    }
 }
 
 function closeAuthModal() {
     authModal.classList.add('hidden');
+}
+
+async function handleGoogleLogin(response) {
+    authError.classList.add('hidden');
+    const btn = document.getElementById('submitAuthBtn');
+    btn.disabled = true;
+    btn.textContent = 'Verifying Google Auth...';
+
+    try {
+        const res = await fetch(`${cloud.apiBase}/api/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: response.credential })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            cloud.setAuth({
+                id: data._id,
+                username: data.username,
+                profilePicture: data.profilePicture
+            }, data.token);
+            closeAuthModal();
+            loadHistory();
+        } else {
+            authError.textContent = data.error || 'Google Authentication failed';
+            authError.classList.remove('hidden');
+        }
+    } catch (err) {
+        authError.textContent = 'Google Auth Network error occurred';
+        authError.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = isLoginMode ? 'Login' : 'Register';
+    }
 }
 
 async function handleAuthSubmit(e) {

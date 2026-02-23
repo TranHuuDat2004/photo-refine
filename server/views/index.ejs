@@ -10,7 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -22,6 +23,8 @@
                 <button id="registerBtnBtn" class="primary-btn btn-small">Register</button>
             </div>
             <div class="user-info hidden" id="userInfo">
+                <img id="userAvatar" src="" class="hidden" alt="Avatar"
+                    style="width:24px; height:24px; border-radius:50%; object-fit:cover;">
                 <span id="userNameDisplay"></span>
                 <button id="logoutBtn" class="secondary-btn btn-small logout-btn">
                     <i data-lucide="log-out"></i>
@@ -42,6 +45,14 @@
                     <button id="closeModalBtn" class="close-btn"><i data-lucide="x"></i></button>
                 </div>
                 <div class="modal-body">
+                    <div class="google-login-container">
+                        <div id="googleButtonWrapper"></div>
+                    </div>
+
+                    <div class="auth-divider">
+                        <span>OR</span>
+                    </div>
+
                     <form id="authForm">
                         <div class="form-group">
                             <label for="username">Username</label>
@@ -208,6 +219,9 @@
             </div>
         </main>
     </div>
+    <script>
+        window.GOOGLE_CLIENT_ID = "<%= GOOGLE_CLIENT_ID %>";
+    </script>
     <script src="/editor.js"></script>
     <script>
         lucide.createIcons();

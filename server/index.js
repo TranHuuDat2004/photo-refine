@@ -6,6 +6,7 @@ const path = require('path');
 
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('./models/User');
 const Edit = require('./models/Edit');
 
@@ -27,6 +28,9 @@ const REPO = process.env.GITHUB_REPO;
 const BRANCH = process.env.GITHUB_BRANCH || 'main';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/photorefine';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // Connect to MongoDB
 mongoose.connect(MONGO_URI)
@@ -60,7 +64,9 @@ app.get('/health', (req, res) => res.send('PhotoRefine Cloud Sync Server is runn
 
 // Render Main Page
 app.get('/', (req, res) => {
-    res.render('index');
+    res.render('index', {
+        GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || ''
+    });
 });
 
 // --- Auth Routes ---
@@ -106,6 +112,70 @@ app.post('/api/login', async (req, res) => {
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Login failed', details: error.message });
+    }
+});
+
+app.post('/api/auth/google', async (req, res) => {
+    try {
+        const { token } = req.body;
+
+        if (!GOOGLE_CLIENT_ID) {
+            return res.status(500).json({ error: 'Google Auth is not configured on the server.' });
+        }
+
+        // Verify the Google ID token
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: GOOGLE_CLIENT_ID
+        });
+
+        const payload = ticket.getPayload();
+        const { sub: googleId, email, name, picture } = payload;
+
+        // Find existing user by googleId or email
+        let user = await User.findOne({
+            $or: [{ googleId }, { email }]
+        });
+
+        if (user) {
+            // Update missing google info if needed
+            let needsSave = false;
+            if (!user.googleId) { user.googleId = googleId; needsSave = true; }
+            if (!user.profilePicture && picture) { user.profilePicture = picture; needsSave = true; }
+            if (needsSave) await user.save();
+        } else {
+            // Create a new user automatically
+            // Handle edge case where their google name conflicts with an existing username
+            let baseUsername = name.replace(/\s+/g, '').toLowerCase();
+            let uniqueUsername = baseUsername;
+            let counter = 1;
+
+            while (await User.findOne({ username: uniqueUsername })) {
+                uniqueUsername = `${baseUsername}${counter}`;
+                counter++;
+            }
+
+            user = await User.create({
+                username: uniqueUsername,
+                email: email,
+                googleId: googleId,
+                profilePicture: picture
+            });
+        }
+
+        // Generate our own JWT token for the app
+        const appToken = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '30d' });
+
+        res.json({
+            _id: user._id,
+            username: user.username,
+            profilePicture: user.profilePicture,
+            token: appToken
+        });
+
+    } catch (error) {
+        console.error('Google Auth error:', error);
+        res.status(401).json({ error: 'Invalid Google Token', details: error.message });
     }
 });
 
