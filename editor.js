@@ -203,12 +203,15 @@ function showAuthModal(loginMode = true) {
 
     // Render Google Button if SDK is loaded
     if (window.google && window.GOOGLE_CLIENT_ID) {
+        const wrapper = document.getElementById('googleButtonWrapper');
+        wrapper.innerHTML = ''; // Clear previous button to avoid double rendering
+
         google.accounts.id.initialize({
             client_id: window.GOOGLE_CLIENT_ID,
             callback: handleGoogleLogin
         });
         google.accounts.id.renderButton(
-            document.getElementById('googleButtonWrapper'),
+            wrapper,
             { theme: 'outline', size: 'large', width: 350 }
         );
     }
