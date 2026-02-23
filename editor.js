@@ -366,19 +366,33 @@ function applySharpen(imageData, amount) {
     return imageData;
 }
 
-function downloadImage() {
+async function downloadImage() {
     if (!originalImage) return;
+
+    // Change button text to indicate processing
+    const oldText = downloadBtn.innerHTML;
+    downloadBtn.innerHTML = 'Saving...';
+    downloadBtn.style.pointerEvents = 'none';
+
     const dataUrl = canvas.toDataURL('image/png');
 
-    // Save to Cloud before downloading
-    cloud.save(dataUrl).then(() => {
+    try {
+        // Save to Cloud before downloading (wait for completion)
+        await cloud.save(dataUrl);
         setTimeout(loadHistory, 1000); // Wait for GitHub to process
-    });
+    } catch (e) {
+        console.error('Cloud Save Error:', e);
+    }
 
+    // Trigger browser download
     const link = document.createElement('a');
     link.download = 'refined-photo.png';
     link.href = dataUrl;
     link.click();
+
+    // Restore button state
+    downloadBtn.innerHTML = oldText;
+    downloadBtn.style.pointerEvents = 'auto';
 }
 
 async function loadHistory() {
