@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhotoRefine | Login</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+    <div class="login-page-container">
+        <!-- Left Banner: Image Side -->
+        <div class="login-left">
+            <img src="/demo/demo1.jpg" alt="PhotoRefine Background">
+            <div class="login-left-overlay">
+                <div>
+                    <h1>Photo<span style="color:var(--accent);">Refine</span></h1>
+                    <p>Professional Image Processing Powered by HTML5 & Cloud</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Auth Form -->
+        <div class="login-right">
+            <div class="login-form-wrapper">
+                <div class="modal-header" style="border-bottom:none; padding-bottom: 0;">
+                    <h2 id="modalTitle">Login to Cloud</h2>
+                </div>
+
+                <div class="auth-toggle">
+                    <button id="tabLogin" class="auth-tab active">Login</button>
+                    <button id="tabRegister" class="auth-tab">Register</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="google-login-container">
+                        <div id="googleButtonWrapper"></div>
+                    </div>
+
+                    <div class="auth-divider">
+                        <span>OR</span>
+                    </div>
+
+                    <form id="authForm">
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" required minlength="3" placeholder="Enter username">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" required minlength="6" placeholder="Enter password">
+                        </div>
+                        <div id="authError" class="auth-error hidden"></div>
+                        <button type="submit" id="submitAuthBtn" class="primary-btn w-full">Login</button>
+                    </form>
+
+                    <div style="margin-top: 1.5rem; text-align: center;">
+                        <a href="/" class="secondary-btn btn-small" style="display:inline-flex; width:auto;"><i
+                                data-lucide="arrow-left" style="margin-right: 5px;"></i> Back to Editor in Offline
+                            Mode</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.GOOGLE_CLIENT_ID = "<%= GOOGLE_CLIENT_ID %>";
+        lucide.createIcons();
+
+        // Auth Logic specifically for this page
+        const authForm = document.getElementById('authForm');
+        const modalTitle = document.getElementById('modalTitle');
+        const authError = document.getElementById('authError');
+        const tabLogin = document.getElementById('tabLogin');
+        const tabRegister = document.getElementById('tabRegister');
+        let isLoginMode = true;
+
+        tabLogin.addEventListener('click', () => setMode(true));
+        tabRegister.addEventListener('click', () => setMode(false));
+
+        function setMode(loginMode) {
+            isLoginMode = loginMode;
+            if (loginMode) {
+                tabLogin.classList.add('active');
+                tabRegister.classList.remove('active');
+            } else {
+                tabRegister.classList.add('active');
+                tabLogin.classList.remove('active');
+            }
+            modalTitle.textContent = loginMode ? 'Login to Cloud' : 'Register New Account';
+            document.getElementById('submitAuthBtn').textContent = loginMode ? 'Login' : 'Register';
+            authError.classList.add('hidden');
+        }
+
+        window.onload = function () {
+            if (window.google && window.GOOGLE_CLIENT_ID) {
+                const wrapper = document.getElementById('googleButtonWrapper');
+                wrapper.innerHTML = '';
+                google.accounts.id.initialize({
+                    client_id: window.GOOGLE_CLIENT_ID,
+                    callback: handleGoogleLogin
+                });
+                google.accounts.id.renderButton(
+                    wrapper,
+                    { theme: 'outline', size: 'large', width: 350 }
+                );
+            }
+        };
+
+        async function handleGoogleLogin(response) {
+            authError.classList.add('hidden');
+            const btn = document.getElementById('submitAuthBtn');
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            try {
+                const res = await fetch('/api/auth/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: response.credential })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('photo_refine_user', JSON.stringify({
+                        id: data._id, username: data.username, profilePicture: data.profilePicture
+                    }));
+                    localStorage.setItem('photo_refine_token', data.token);
+                    window.location.href = '/';
+                } else {
+                    authError.textContent = data.error || 'Failed';
+                    authError.classList.remove('hidden');
+                }
+            } catch (err) {
+                authError.textContent = 'Network error';
+                authError.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = isLoginMode ? 'Login' : 'Register';
+            }
+        }
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('submitAuthBtn');
+
+            btn.disabled = true;
+            btn.textContent = 'Please wait...';
+            authError.classList.add('hidden');
+
+            try {
+                const endpoint = isLoginMode ? '/api/login' : '/api/register';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('photo_refine_user', JSON.stringify({ id: data._id, username: data.username }));
+                    localStorage.setItem('photo_refine_token', data.token);
+                    window.location.href = '/';
+                } else {
+                    authError.textContent = data.error || 'Authentication failed';
+                    authError.classList.remove('hidden');
+                }
+            } catch (err) {
+                authError.textContent = 'Network error occurred';
+                authError.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = isLoginMode ? 'Login' : 'Register';
+            }
+        });
+    </script>
+</body>
+
+</html>

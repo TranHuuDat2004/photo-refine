@@ -10,8 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Lucide Icons -->
-    <!-- Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -19,8 +17,8 @@
         <header>
             <h1>Photo<span>Refine</span></h1>
             <div class="auth-controls" id="authControls">
-                <button id="loginBtnBtn" class="secondary-btn btn-small">Login</button>
-                <button id="registerBtnBtn" class="primary-btn btn-small">Register</button>
+                <a href="/login" class="secondary-btn btn-small" style="text-decoration:none">Login</a>
+                <a href="/login" class="primary-btn btn-small" style="text-decoration:none">Register</a>
             </div>
             <div class="user-info hidden" id="userInfo">
                 <img id="userAvatar" src="" class="hidden" alt="Avatar"
@@ -37,37 +35,7 @@
             <p>Professional Image Processing Powered by HTML5 & Cloud</p>
         </header>
 
-        <!-- Auth Modals -->
-        <div id="authModal" class="modal-overlay hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 id="modalTitle">Login to Cloud</h2>
-                    <button id="closeModalBtn" class="close-btn"><i data-lucide="x"></i></button>
-                </div>
-                <div class="modal-body">
-                    <div class="google-login-container">
-                        <div id="googleButtonWrapper"></div>
-                    </div>
-
-                    <div class="auth-divider">
-                        <span>OR</span>
-                    </div>
-
-                    <form id="authForm">
-                        <div class="form-group">
-                            <label for="username">Username</label>
-                            <input type="text" id="username" required minlength="3" placeholder="Enter username">
-                        </div>
-                        <div class="form-group">
-                            <label for="password">Password</label>
-                            <input type="password" id="password" required minlength="6" placeholder="Enter password">
-                        </div>
-                        <div id="authError" class="auth-error hidden"></div>
-                        <button type="submit" id="submitAuthBtn" class="primary-btn w-full">Login</button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <!-- Auth Modals Removed - See login.ejs -->
 
         <main>
             <div class="editor-layout">
@@ -219,9 +187,6 @@
             </div>
         </main>
     </div>
-    <script>
-        window.GOOGLE_CLIENT_ID = "<%= GOOGLE_CLIENT_ID %>";
-    </script>
     <script src="/editor.js"></script>
     <script>
         lucide.createIcons();

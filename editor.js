@@ -124,7 +124,7 @@ class CloudStorage {
 
     async save(imageDataUrl) {
         if (!this.isOnline || !this.token) {
-            alert('Please login to save to cloud');
+            window.location.href = '/login';
             return;
         }
         try {
@@ -136,7 +136,10 @@ class CloudStorage {
             });
 
             if (!response.ok) {
-                if (response.status === 401) this.logout();
+                if (response.status === 401) {
+                    this.logout();
+                    window.location.href = '/login';
+                }
                 throw new Error('Upload failed');
             }
             return await response.json();
@@ -154,7 +157,9 @@ class CloudStorage {
             });
 
             if (!response.ok) {
-                if (response.status === 401) this.logout();
+                if (response.status === 401) {
+                    this.logout();
+                }
                 return [];
             }
             return await response.json();
@@ -186,113 +191,7 @@ const cloud = new CloudStorage();
 let originalImage = null;
 let currentImageData = null;
 
-// Auth Modal Logic
-const authModal = document.getElementById('authModal');
-const authForm = document.getElementById('authForm');
-const modalTitle = document.getElementById('modalTitle');
-const authError = document.getElementById('authError');
-let isLoginMode = true;
-
-function showAuthModal(loginMode = true) {
-    isLoginMode = loginMode;
-    modalTitle.textContent = loginMode ? 'Login to Cloud' : 'Register New Account';
-    document.getElementById('submitAuthBtn').textContent = loginMode ? 'Login' : 'Register';
-    authError.classList.add('hidden');
-    authForm.reset();
-    authModal.classList.remove('hidden');
-
-    // Render Google Button if SDK is loaded
-    if (window.google && window.GOOGLE_CLIENT_ID) {
-        const wrapper = document.getElementById('googleButtonWrapper');
-        wrapper.innerHTML = ''; // Clear previous button to avoid double rendering
-
-        google.accounts.id.initialize({
-            client_id: window.GOOGLE_CLIENT_ID,
-            callback: handleGoogleLogin
-        });
-        google.accounts.id.renderButton(
-            wrapper,
-            { theme: 'outline', size: 'large', width: 350 }
-        );
-    }
-}
-
-function closeAuthModal() {
-    authModal.classList.add('hidden');
-}
-
-async function handleGoogleLogin(response) {
-    authError.classList.add('hidden');
-    const btn = document.getElementById('submitAuthBtn');
-    btn.disabled = true;
-    btn.textContent = 'Verifying Google Auth...';
-
-    try {
-        const res = await fetch(`${cloud.apiBase}/api/auth/google`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: response.credential })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-            cloud.setAuth({
-                id: data._id,
-                username: data.username,
-                profilePicture: data.profilePicture
-            }, data.token);
-            closeAuthModal();
-            loadHistory();
-        } else {
-            authError.textContent = data.error || 'Google Authentication failed';
-            authError.classList.remove('hidden');
-        }
-    } catch (err) {
-        authError.textContent = 'Google Auth Network error occurred';
-        authError.classList.remove('hidden');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = isLoginMode ? 'Login' : 'Register';
-    }
-}
-
-async function handleAuthSubmit(e) {
-    e.preventDefault();
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const btn = document.getElementById('submitAuthBtn');
-
-    btn.disabled = true;
-    btn.textContent = 'Please wait...';
-    authError.classList.add('hidden');
-
-    try {
-        const endpoint = isLoginMode ? '/api/login' : '/api/register';
-        const response = await fetch(`${cloud.apiBase}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            cloud.setAuth({ id: data._id, username: data.username }, data.token);
-            closeAuthModal();
-            loadHistory();
-        } else {
-            authError.textContent = data.error || 'Authentication failed';
-            authError.classList.remove('hidden');
-        }
-    } catch (err) {
-        authError.textContent = 'Network error occurred';
-        authError.classList.remove('hidden');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = isLoginMode ? 'Login' : 'Register';
-    }
-}
+// Auth flows moved to login.ejs
 
 // Initialization
 async function init() {
@@ -309,22 +208,9 @@ async function init() {
 }
 
 function setupEventListeners() {
-    // Auth Event Listeners
-    const loginBtn = document.getElementById('loginBtnBtn');
-    const registerBtn = document.getElementById('registerBtnBtn');
+    // Editor Event Listeners
     const logoutBtn = document.getElementById('logoutBtn');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-
-    if (loginBtn) loginBtn.addEventListener('click', () => showAuthModal(true));
-    if (registerBtn) registerBtn.addEventListener('click', () => showAuthModal(false));
-    if (logoutBtn) logoutBtn.addEventListener('click', () => cloud.logout());
-    if (closeModalBtn) closeModalBtn.addEventListener('click', closeAuthModal);
-    if (authForm) authForm.addEventListener('submit', handleAuthSubmit);
-
-    // Close modal on outside click
-    window.addEventListener('click', (e) => {
-        if (e.target === authModal) closeAuthModal();
-    });
+    if (logoutBtn) logoutBtn.addEventListener('click', () => { cloud.logout(); window.location.reload(); });
 
     const historyAddNew = document.getElementById('historyAddNew');
     if (historyAddNew) {

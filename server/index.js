@@ -64,7 +64,12 @@ app.get('/health', (req, res) => res.send('PhotoRefine Cloud Sync Server is runn
 
 // Render Main Page
 app.get('/', (req, res) => {
-    res.render('index', {
+    res.render('index');
+});
+
+// Render Login Page
+app.get('/login', (req, res) => {
+    res.render('login', {
         GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || ''
     });
 });
