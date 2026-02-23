@@ -184,6 +184,60 @@ app.post('/api/auth/google', async (req, res) => {
     }
 });
 
+app.post('/api/auth/google/custom', async (req, res) => {
+    try {
+        const { googleId, email, name, picture } = req.body;
+
+        if (!googleId || !email) {
+            return res.status(400).json({ error: 'Missing fundamental Google Auth identifiers.' });
+        }
+
+        // Find existing user by googleId or email
+        let user = await User.findOne({
+            $or: [{ googleId }, { email }]
+        });
+
+        if (user) {
+            // Update missing google info if needed
+            let needsSave = false;
+            if (!user.googleId) { user.googleId = googleId; needsSave = true; }
+            if (!user.profilePicture && picture) { user.profilePicture = picture; needsSave = true; }
+            if (needsSave) await user.save();
+        } else {
+            // Create a new user automatically
+            let baseUsername = name.replace(/\s+/g, '').toLowerCase();
+            let uniqueUsername = baseUsername;
+            let counter = 1;
+
+            while (await User.findOne({ username: uniqueUsername })) {
+                uniqueUsername = `${baseUsername}${counter}`;
+                counter++;
+            }
+
+            user = await User.create({
+                username: uniqueUsername,
+                email: email,
+                googleId: googleId,
+                profilePicture: picture
+            });
+        }
+
+        // Generate our own JWT token for the app
+        const appToken = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '30d' });
+
+        res.json({
+            _id: user._id,
+            username: user.username,
+            profilePicture: user.profilePicture,
+            token: appToken
+        });
+
+    } catch (error) {
+        console.error('Google Custom Auth error:', error);
+        res.status(500).json({ error: 'Failed to process custom Google login', details: error.message });
+    }
+});
+
 // --- Editor Routes (Protected) ---
 
 // Upload image to GitHub & Save Reference to MongoDB
