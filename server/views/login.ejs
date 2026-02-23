@@ -114,31 +114,28 @@
             authError.classList.add('hidden');
         }
 
-        // Removed the window.initializeGoogleAuth forcing mechanism.
-
         let googleTokenClient;
 
-        window.onload = function () {
-            // Re-initialize using generic OAuth Token Client so we can trigger it from ANY html button
-            if (window.google && window.GOOGLE_CLIENT_ID) {
-                // Initialize standard token client for custom button trigger
+        function triggerGoogleLogin() {
+            authError.classList.add('hidden');
+            if (typeof google === 'undefined') {
+                authError.textContent = 'Google SDK not loaded yet. Please try again.';
+                authError.classList.remove('hidden');
+                return;
+            }
+            if (!googleTokenClient && window.GOOGLE_CLIENT_ID) {
                 googleTokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: window.GOOGLE_CLIENT_ID,
                     scope: 'email profile openid',
                     callback: handleGoogleAccessToken
                 });
             }
-        };
-
-        function triggerGoogleLogin() {
-            authError.classList.add('hidden');
-            if (!googleTokenClient) {
-                authError.textContent = 'Google SDK not loaded yet. Please try again.';
+            if (googleTokenClient) {
+                googleTokenClient.requestAccessToken();
+            } else {
+                authError.textContent = 'Google Client ID is missing.';
                 authError.classList.remove('hidden');
-                return;
             }
-            // Triggers the Google popup
-            googleTokenClient.requestAccessToken();
         }
 
         async function handleGoogleAccessToken(tokenResponse) {
