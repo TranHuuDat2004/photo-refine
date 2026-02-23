@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" onload="initializeGoogleAuth()" async defer></script>
 </head>
 
 <body>
@@ -100,7 +100,7 @@
             authError.classList.add('hidden');
         }
 
-        window.onload = function () {
+        window.initializeGoogleAuth = function () {
             if (window.google && window.GOOGLE_CLIENT_ID) {
                 const wrapper = document.getElementById('googleButtonWrapper');
                 wrapper.innerHTML = '';
