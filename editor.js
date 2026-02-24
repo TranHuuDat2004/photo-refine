@@ -5,6 +5,12 @@ const dropZone = document.getElementById('dropZone');
 const resetBtn = document.getElementById('resetBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 
+const cropBtn = document.getElementById('cropBtn');
+const applyCropBtn = document.getElementById('applyCropBtn');
+const cancelCropBtn = document.getElementById('cancelCropBtn');
+const cropActions = document.getElementById('cropActions');
+const mainActions = document.getElementById('mainActions');
+
 // Sliders
 const sliders = {
     brightness: document.getElementById('brightness'),
@@ -219,6 +225,8 @@ const cloud = new CloudStorage();
 
 let originalImage = null;
 let currentImageData = null;
+let cropper = null;
+let isCropping = false;
 
 // Auth flows moved to login.ejs
 
@@ -300,6 +308,11 @@ function setupEventListeners() {
     resetBtn.addEventListener('click', resetFilters);
     downloadBtn.addEventListener('click', downloadImage);
 
+    // Crop Listeners
+    if (cropBtn) cropBtn.addEventListener('click', startCropping);
+    if (cancelCropBtn) cancelCropBtn.addEventListener('click', cancelCropping);
+    if (applyCropBtn) applyCropBtn.addEventListener('click', applyCrop);
+
     // Presets
     presetCards.forEach(card => {
         card.addEventListener('click', () => {
@@ -314,6 +327,7 @@ function setupEventListeners() {
 }
 
 function applyPreset(key) {
+    if (isCropping) return; // Prevent preset changes while cropping
     const preset = presets[key];
     if (!preset) return;
 
@@ -383,7 +397,7 @@ function resetFilters() {
 }
 
 function applyFilters() {
-    if (!originalImage) return;
+    if (!originalImage || isCropping) return;
 
     // Reset canvas to original image before applying filters
     ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
@@ -445,6 +459,69 @@ function applyTemperatureTint(imageData, temp, tint) {
         data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + tintK)); // G
     }
     return imageData;
+}
+
+/**
+ * Cropping Functions
+ */
+function startCropping() {
+    if (!originalImage || isCropping) return;
+
+    isCropping = true;
+
+    // Hide standard actions, show crop actions
+    mainActions.style.display = 'none';
+    cropActions.style.display = 'flex';
+    document.querySelector('.presets-grid').style.opacity = '0.5';
+    document.querySelector('.presets-grid').style.pointerEvents = 'none';
+
+    // Draw the pure original image onto the canvas without filters
+    ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+
+    cropper = new Cropper(canvas, {
+        viewMode: 1, // Restrict the crop box to not exceed the size of the canvas
+        background: false,
+        guides: true,
+        autoCropArea: 0.8,
+        responsive: true
+    });
+}
+
+function cancelCropping() {
+    if (!isCropping) return;
+
+    isCropping = false;
+    if (cropper) {
+        cropper.destroy();
+        cropper = null;
+    }
+
+    // Restore UI
+    mainActions.style.display = 'flex';
+    cropActions.style.display = 'none';
+    document.querySelector('.presets-grid').style.opacity = '1';
+    document.querySelector('.presets-grid').style.pointerEvents = 'auto';
+
+    // Re-apply filters
+    applyFilters();
+}
+
+function applyCrop() {
+    if (!isCropping || !cropper) return;
+
+    // Get cropped canvas
+    const croppedCanvas = cropper.getCroppedCanvas();
+
+    // Convert cropped canvas to an image and update originalImage
+    const croppedUrl = croppedCanvas.toDataURL('image/png');
+    const newImg = new Image();
+    newImg.onload = () => {
+        originalImage = newImg;
+        // Re-setup canvas dimensions and initial drawing based on new cropped image
+        setupCanvas(newImg);
+        cancelCropping(); // This will cleanup cropper and re-apply filters
+    };
+    newImg.src = croppedUrl;
 }
 
 /**

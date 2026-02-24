@@ -12,6 +12,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Cropper.js -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 </head>
 
 <body>
@@ -206,6 +210,17 @@
                     </div>
 
                     <div class="actions">
+                        <button id="cropBtn" class="secondary-btn">
+                            <i data-lucide="crop"></i> Crop Input Image
+                        </button>
+                    </div>
+
+                    <div class="actions" id="cropActions" style="display: none; margin-bottom: 15px;">
+                        <button id="cancelCropBtn" class="secondary-btn" style="flex: 1;">Cancel</button>
+                        <button id="applyCropBtn" class="primary-btn" style="flex: 1;">Apply Crop</button>
+                    </div>
+
+                    <div class="actions" id="mainActions">
                         <button id="resetBtn" class="secondary-btn">Reset All</button>
                         <button id="downloadBtn" class="primary-btn">Download</button>
                     </div>
