@@ -540,10 +540,10 @@ async function handleBackgroundRemoval() {
         overlay.classList.remove('hidden');
         text.textContent = 'Downloading AI Models...';
 
-        // Use a more stable CDN and a slightly newer version
+        // Use the official img.ly CDN for best compatibility with WASM files
         const LIB_VERSION = '1.5.3';
-        const moduleURL = `https://cdn.jsdelivr.net/npm/@imgly/background-removal@${LIB_VERSION}/dist/index.js`;
-        const publicPath = `https://cdn.jsdelivr.net/npm/@imgly/background-removal@${LIB_VERSION}/dist/`;
+        const moduleURL = `https://static.img.ly/packages/@imgly/background-removal/${LIB_VERSION}/dist/index.js`;
+        const publicPath = `https://static.img.ly/packages/@imgly/background-removal/${LIB_VERSION}/dist/`;
 
         console.log('Loading AI module from:', moduleURL);
 
@@ -561,8 +561,8 @@ async function handleBackgroundRemoval() {
                 const percent = Math.round((step / count) * 100);
                 text.textContent = `AI Processing: ${percent}%`;
             },
-            model: 'medium', // 'small' is faster, 'medium' is better
-            publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/' // Required for WASM files
+            model: 'medium',
+            publicPath: publicPath // Use the synchronized publicPath
         });
 
         // Convert result to image and draw on canvas
