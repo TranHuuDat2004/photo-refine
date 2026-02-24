@@ -292,6 +292,11 @@ function setupEventListeners() {
     resetBtn.addEventListener('click', resetFilters);
     downloadBtn.addEventListener('click', downloadImage);
 
+    const bgRemoveBtn = document.getElementById('bgRemoveBtn');
+    if (bgRemoveBtn) {
+        bgRemoveBtn.addEventListener('click', handleBackgroundRemoval);
+    }
+
     // Presets
     presetCards.forEach(card => {
         card.addEventListener('click', () => {
@@ -520,6 +525,58 @@ async function downloadImage() {
     // Restore button state
     downloadBtn.innerHTML = oldText;
     downloadBtn.style.pointerEvents = 'auto';
+}
+
+async function handleBackgroundRemoval() {
+    if (!originalImage) {
+        alert('Please upload an image first');
+        return;
+    }
+
+    const overlay = document.getElementById('processingOverlay');
+    const text = document.getElementById('processingText');
+
+    try {
+        overlay.classList.remove('hidden');
+        text.textContent = 'Downloading AI Models...';
+
+        // Dynamically import the library from CDN
+        // Note: Using a specific version for stability
+        const module = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/index.js');
+        const removeBackground = module.default;
+
+        text.textContent = 'AI is processing image...';
+
+        // Get the current canvas content as a blob
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+        // Run the background removal
+        const resultBlob = await removeBackground(blob, {
+            progress: (step, count) => {
+                const percent = Math.round((step / count) * 100);
+                text.textContent = `AI Processing: ${percent}%`;
+            },
+            model: 'medium', // 'small' is faster, 'medium' is better
+            publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/' // Required for WASM files
+        });
+
+        // Convert result to image and draw on canvas
+        const resultUrl = URL.createObjectURL(resultBlob);
+        const img = new Image();
+        img.onload = () => {
+            originalImage = img;
+            setupCanvas(img);
+            resetFilters();
+            URL.revokeObjectURL(resultUrl);
+            overlay.classList.add('hidden');
+        };
+        img.src = resultUrl;
+
+    } catch (error) {
+        console.error('Background Removal Error:', error);
+        alert('Failed to remove background: ' + error.message);
+        overlay.classList.add('hidden');
+    }
 }
 
 async function loadHistory() {
