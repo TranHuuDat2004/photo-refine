@@ -103,23 +103,31 @@ class CloudStorage {
         const userInfo = document.getElementById('userInfo');
         const userNameDisplay = document.getElementById('userNameDisplay');
 
+        // Update Auth State (Login/Register vs. Logout) independently of server status
+        if (this.token && this.user) {
+            if (authControls) authControls.classList.add('hidden');
+            if (userInfo) userInfo.classList.remove('hidden');
+            if (userNameDisplay) userNameDisplay.textContent = this.user.username;
+        } else {
+            if (authControls) authControls.classList.remove('hidden');
+            if (userInfo) userInfo.classList.add('hidden');
+        }
+
+        // Update Server Status UI
         if (this.isOnline && status) {
             if (this.token && this.user) {
                 status.classList.add('online');
                 status.innerHTML = '<i data-lucide="cloud"></i> <span>Connected</span>';
-
-                authControls.classList.add('hidden');
-                userInfo.classList.remove('hidden');
-                userNameDisplay.textContent = this.user.username;
             } else {
                 status.classList.remove('online');
                 status.innerHTML = '<i data-lucide="cloud-off"></i> <span>Login Required</span>';
-
-                authControls.classList.remove('hidden');
-                userInfo.classList.add('hidden');
             }
-            if (window.lucide) window.lucide.createIcons();
+        } else if (status) {
+            status.classList.remove('online');
+            status.innerHTML = '<i data-lucide="cloud-off"></i> <span>Offline Mode</span>';
         }
+
+        if (window.lucide) window.lucide.createIcons();
     }
 
     async save(imageDataUrl) {
@@ -197,13 +205,19 @@ let currentImageData = null;
 async function init() {
     await cloud.init();
     setupEventListeners();
+
+    // Always update UI to show correct auth state based on localStorage
+    cloud.updateUI();
+
     if (cloud.token) {
         loadHistory();
     } else {
         const historyList = document.getElementById('historyList');
-        const existingItems = historyList.querySelectorAll('.history-item, .empty-history, .history-error');
-        existingItems.forEach(item => item.remove());
-        historyList.insertAdjacentHTML('beforeend', '<div class="empty-history"><p>Please login to view edits</p></div>');
+        if (historyList) {
+            const existingItems = historyList.querySelectorAll('.history-item, .empty-history, .history-error');
+            existingItems.forEach(item => item.remove());
+            historyList.insertAdjacentHTML('beforeend', '<div class="empty-history"><p>Please login to view edits</p></div>');
+        }
     }
 }
 
