@@ -545,11 +545,10 @@ async function handleBackgroundRemoval() {
         overlay.classList.remove('hidden');
         text.textContent = 'Loading TensorFlow AI Model...';
 
-        // Load the model
+        // Load the model with higher accuracy parameters
         const net = await bodyPix.load({
-            architecture: 'MobileNetV1',
+            architecture: 'ResNet50', // Better accuracy than MobileNetV1
             outputStride: 16,
-            multiplier: 0.75,
             quantBytes: 2
         });
 
@@ -562,11 +561,11 @@ async function handleBackgroundRemoval() {
         const tempCtx = tempCanvas.getContext('2d');
         tempCtx.drawImage(originalImage, 0, 0, tempCanvas.width, tempCanvas.height);
 
-        // Segment the person from the canvas
+        // Segment the person from the canvas with high resolution
         const segmentation = await net.segmentPerson(tempCanvas, {
             flipHorizontal: false,
-            internalResolution: 'medium',
-            segmentationThreshold: 0.7
+            internalResolution: 'high', // Use high resolution for better edge detection
+            segmentationThreshold: 0.75 // Slightly stricter threshold for cleaner edges
         });
 
         text.textContent = 'Applying transparency mask...';
