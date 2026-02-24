@@ -105,12 +105,25 @@ class CloudStorage {
 
         // Update Auth State (Login/Register vs. Logout) independently of server status
         if (this.token && this.user) {
-            if (authControls) authControls.classList.add('hidden');
-            if (userInfo) userInfo.classList.remove('hidden');
+            if (authControls) {
+                authControls.classList.add('hidden');
+                authControls.style.display = 'none';
+            }
+            if (userInfo) {
+                userInfo.classList.remove('hidden');
+                userInfo.style.display = 'flex';
+                userInfo.style.alignItems = 'center';
+            }
             if (userNameDisplay) userNameDisplay.textContent = this.user.username;
         } else {
-            if (authControls) authControls.classList.remove('hidden');
-            if (userInfo) userInfo.classList.add('hidden');
+            if (authControls) {
+                authControls.classList.remove('hidden');
+                authControls.style.display = 'flex';
+            }
+            if (userInfo) {
+                userInfo.classList.add('hidden');
+                userInfo.style.display = 'none';
+            }
         }
 
         // Update Server Status UI
