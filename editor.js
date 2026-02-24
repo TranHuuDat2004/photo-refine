@@ -533,47 +533,65 @@ async function handleBackgroundRemoval() {
         return;
     }
 
+    if (typeof bodyPix === 'undefined') {
+        alert('TensorFlow BodyPix model is not loaded yet. Please wait a moment or check your connection.');
+        return;
+    }
+
     const overlay = document.getElementById('processingOverlay');
     const text = document.getElementById('processingText');
 
     try {
         overlay.classList.remove('hidden');
-        text.textContent = 'Downloading AI Models...';
+        text.textContent = 'Loading TensorFlow AI Model...';
 
-        // Use unpkg.com as it is generally more accessible than static.img.ly in some regions
-        const LIB_VERSION = '1.5.3';
-        const CDN_BASE = `https://unpkg.com/@imgly/background-removal@${LIB_VERSION}/dist/`;
-        const moduleURL = `${CDN_BASE}index.mjs`; // Use .mjs for explicit ESM
-        const publicPath = CDN_BASE;
-
-        console.log('Attempting to load AI module from:', moduleURL);
-
-        const module = await import(moduleURL);
-        const removeBackground = module.default;
-
-        text.textContent = 'AI is processing image...';
-
-        // Get the current canvas content as a blob
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-
-        // Run the background removal
-        const resultBlob = await removeBackground(blob, {
-            progress: (step, count) => {
-                const percent = Math.round((step / count) * 100);
-                text.textContent = `AI Processing: ${percent}%`;
-            },
-            model: 'medium',
-            publicPath: publicPath // Ensure WASM files are also loaded from unpkg
+        // Load the model
+        const net = await bodyPix.load({
+            architecture: 'MobileNetV1',
+            outputStride: 16,
+            multiplier: 0.75,
+            quantBytes: 2
         });
 
-        // Convert result to image and draw on canvas
-        const resultUrl = URL.createObjectURL(resultBlob);
+        text.textContent = 'AI is segmenting the image...';
+
+        // We need an off-screen canvas to draw the full image for processing
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = originalImage.width || originalImage.naturalWidth;
+        tempCanvas.height = originalImage.height || originalImage.naturalHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(originalImage, 0, 0, tempCanvas.width, tempCanvas.height);
+
+        // Segment the person from the canvas
+        const segmentation = await net.segmentPerson(tempCanvas, {
+            flipHorizontal: false,
+            internalResolution: 'medium',
+            segmentationThreshold: 0.7
+        });
+
+        text.textContent = 'Applying transparency mask...';
+
+        // Process pixel data to make background transparent
+        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+        const data = imageData.data;
+        const mask = segmentation.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+            // mask[i/4] is 1 for person, 0 for background
+            if (mask[i / 4] === 0) {
+                data[i + 3] = 0; // Set Alpha to 0 (transparent)
+            }
+        }
+
+        tempCtx.putImageData(imageData, 0, 0);
+
+        // Convert result back to image
+        const resultUrl = tempCanvas.toDataURL('image/png');
         const img = new Image();
         img.onload = () => {
             originalImage = img;
             setupCanvas(img);
             resetFilters();
-            URL.revokeObjectURL(resultUrl);
             overlay.classList.add('hidden');
         };
         img.src = resultUrl;
