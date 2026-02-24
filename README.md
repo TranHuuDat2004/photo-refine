@@ -23,8 +23,8 @@ PhotoRefine is a professional-grade, browser-based image editor built with moder
 
 | Before | After |
 | :---: | :---: |
-| ![Original Image](demo/before3.png) | ![Edited Image](demo/after3.png) |
-| ![Original Image](demo/before.png) | ![Edited Image](demo/after.png) |
+| <img src="demo/before3.png" width="250" height="250" alt="Original Image"> | <img src="demo/after3.png" width="250" height="250" alt="Edited Image"> |
+| <img src="demo/before.png" width="250" height="250" alt="Original Image"> | <img src="demo/after.png" width="250" height="250" alt="Edited Image"> |
 
 
 ## 🎥 Video Demo
