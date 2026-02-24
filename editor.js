@@ -244,6 +244,20 @@ function setupEventListeners() {
         historyAddNew.addEventListener('click', () => imageInput.click());
     }
 
+    const syncHistoryBtn = document.getElementById('syncHistoryBtn');
+    if (syncHistoryBtn) {
+        syncHistoryBtn.addEventListener('click', () => {
+            const icon = syncHistoryBtn.querySelector('i');
+            if (icon) icon.classList.add('spinning');
+
+            loadHistory().finally(() => {
+                setTimeout(() => {
+                    if (icon) icon.classList.remove('spinning');
+                }, 600);
+            });
+        });
+    }
+
     dropZone.addEventListener('click', () => imageInput.click());
 
     imageInput.addEventListener('change', (e) => {
