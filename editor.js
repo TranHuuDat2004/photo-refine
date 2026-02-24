@@ -11,6 +11,8 @@ const sliders = {
     contrast: document.getElementById('contrast'),
     saturation: document.getElementById('saturation'),
     blur: document.getElementById('blur'),
+    temperature: document.getElementById('temperature'),
+    tint: document.getElementById('tint'),
     highlights: document.getElementById('highlights'),
     shadows: document.getElementById('shadows'),
     sharpen: document.getElementById('sharpen')
@@ -22,6 +24,8 @@ const valDisplays = {
     contrast: document.getElementById('contrastVal'),
     saturation: document.getElementById('saturationVal'),
     blur: document.getElementById('blurVal'),
+    temperature: document.getElementById('temperatureVal'),
+    tint: document.getElementById('tintVal'),
     highlights: document.getElementById('highlightsVal'),
     shadows: document.getElementById('shadowsVal'),
     sharpen: document.getElementById('sharpenVal')
@@ -31,21 +35,21 @@ const historyList = document.getElementById('historyList');
 const presetCards = document.querySelectorAll('.preset-card');
 
 const presets = {
-    none: { brightness: 100, contrast: 100, saturation: 100, blur: 0, highlights: 0, shadows: 0, sharpen: 0 },
-    bold: { brightness: 105, contrast: 112, saturation: 120, blur: 0, highlights: -10, shadows: -5, sharpen: 35 },
-    vivid: { brightness: 100, contrast: 110, saturation: 140, blur: 0, highlights: 5, shadows: 0, sharpen: 20 },
-    vintage: { brightness: 110, contrast: 95, saturation: 70, blur: 0, highlights: 20, shadows: 15, sharpen: 0 },
-    bw: { brightness: 100, contrast: 120, saturation: 0, blur: 0, highlights: 10, shadows: -10, sharpen: 25 },
-    cinematic: { brightness: 95, contrast: 115, saturation: 85, blur: 0, highlights: -15, shadows: 5, sharpen: 30 },
-    golden: { brightness: 110, contrast: 105, saturation: 125, blur: 0, highlights: 25, shadows: 0, sharpen: 15 },
-    teal: { brightness: 90, contrast: 110, saturation: 110, blur: 0, highlights: -10, shadows: -20, sharpen: 20 },
-    moody: { brightness: 85, contrast: 130, saturation: 70, blur: 0, highlights: -25, shadows: -15, sharpen: 10 },
-    dreamy: { brightness: 115, contrast: 85, saturation: 90, blur: 2, highlights: 35, shadows: 20, sharpen: 0 },
-    highkey: { brightness: 130, contrast: 90, saturation: 105, blur: 0, highlights: 45, shadows: 30, sharpen: 5 },
-    gritty: { brightness: 90, contrast: 140, saturation: 60, blur: 0, highlights: -5, shadows: -20, sharpen: 60 },
-    cold: { brightness: 100, contrast: 108, saturation: 80, blur: 0, highlights: 0, shadows: 5, sharpen: 15 },
-    retro: { brightness: 105, contrast: 95, saturation: 85, blur: 1, highlights: 15, shadows: 10, sharpen: 5 },
-    neon: { brightness: 100, contrast: 125, saturation: 180, blur: 0, highlights: 10, shadows: 0, sharpen: 25 }
+    none: { brightness: 100, contrast: 100, saturation: 100, blur: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0, sharpen: 0 },
+    bold: { brightness: 105, contrast: 112, saturation: 120, blur: 0, temperature: 5, tint: 0, highlights: -10, shadows: -5, sharpen: 35 },
+    vivid: { brightness: 100, contrast: 110, saturation: 140, blur: 0, temperature: 10, tint: 5, highlights: 5, shadows: 0, sharpen: 20 },
+    vintage: { brightness: 110, contrast: 95, saturation: 70, blur: 0, temperature: 30, tint: -10, highlights: 20, shadows: 15, sharpen: 0 },
+    bw: { brightness: 100, contrast: 120, saturation: 0, blur: 0, temperature: 0, tint: 0, highlights: 10, shadows: -10, sharpen: 25 },
+    cinematic: { brightness: 95, contrast: 115, saturation: 85, blur: 0, temperature: -10, tint: 15, highlights: -15, shadows: 5, sharpen: 30 },
+    golden: { brightness: 110, contrast: 105, saturation: 125, blur: 0, temperature: 40, tint: 10, highlights: 25, shadows: 0, sharpen: 15 },
+    teal: { brightness: 90, contrast: 110, saturation: 110, blur: 0, temperature: -30, tint: 20, highlights: -10, shadows: -20, sharpen: 20 },
+    moody: { brightness: 85, contrast: 130, saturation: 70, blur: 0, temperature: -15, tint: -5, highlights: -25, shadows: -15, sharpen: 10 },
+    dreamy: { brightness: 115, contrast: 85, saturation: 90, blur: 2, temperature: 10, tint: 20, highlights: 35, shadows: 20, sharpen: 0 },
+    highkey: { brightness: 130, contrast: 90, saturation: 105, blur: 0, temperature: 5, tint: -5, highlights: 45, shadows: 30, sharpen: 5 },
+    gritty: { brightness: 90, contrast: 140, saturation: 60, blur: 0, temperature: 0, tint: 15, highlights: -5, shadows: -20, sharpen: 60 },
+    cold: { brightness: 100, contrast: 108, saturation: 80, blur: 0, temperature: -40, tint: 0, highlights: 0, shadows: 5, sharpen: 15 },
+    retro: { brightness: 105, contrast: 95, saturation: 85, blur: 1, temperature: 20, tint: 15, highlights: 15, shadows: 10, sharpen: 5 },
+    neon: { brightness: 100, contrast: 125, saturation: 180, blur: 0, temperature: -20, tint: 30, highlights: 10, shadows: 0, sharpen: 25 }
 };
 
 /**
@@ -394,13 +398,20 @@ function applyFilters() {
     ctx.drawImage(canvas, 0, 0);
     ctx.filter = 'none';
 
-    // 2. Custom Pixel Processing (Highlights, Shadows, Sharpen)
+    // 2. Custom Pixel Processing (Highlights, Shadows, Sharpen, Temp, Tint)
     const highlights = parseInt(sliders.highlights.value);
     const shadows = parseInt(sliders.shadows.value);
     const sharpen = parseInt(sliders.sharpen.value);
+    const temperature = parseInt(sliders.temperature.value);
+    const tint = parseInt(sliders.tint.value);
 
-    if (highlights !== 0 || shadows !== 0 || sharpen > 0) {
+    if (highlights !== 0 || shadows !== 0 || sharpen > 0 || temperature !== 0 || tint !== 0) {
         let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        // Temperature & Tint
+        if (temperature !== 0 || tint !== 0) {
+            imageData = applyTemperatureTint(imageData, temperature, tint);
+        }
 
         // Highlights & Shadows
         if (highlights !== 0 || shadows !== 0) {
@@ -414,6 +425,26 @@ function applyFilters() {
 
         ctx.putImageData(imageData, 0, 0);
     }
+}
+
+/**
+ * Adjust Temperature (Yellow/Blue) and Tint (Magenta/Green)
+ */
+function applyTemperatureTint(imageData, temp, tint) {
+    const data = imageData.data;
+    // Map -100 to 100 scale to reasonable adjustment values (-50 to 50 RGB values)
+    const tempK = temp * 0.5; // Positive: more Red/Less Blue. Negative: Less Red/More Blue.
+    const tintK = tint * 0.5; // Positive: more Green. Negative: more Magenta.
+
+    for (let i = 0; i < data.length; i += 4) {
+        // Temperature (Orange-Blue axis)
+        data[i] = Math.min(255, Math.max(0, data[i] + tempK)); // R
+        data[i + 2] = Math.min(255, Math.max(0, data[i + 2] - tempK)); // B
+
+        // Tint (Magenta-Green axis)
+        data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + tintK)); // G
+    }
+    return imageData;
 }
 
 /**
