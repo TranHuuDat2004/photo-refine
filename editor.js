@@ -292,11 +292,6 @@ function setupEventListeners() {
     resetBtn.addEventListener('click', resetFilters);
     downloadBtn.addEventListener('click', downloadImage);
 
-    const bgRemoveBtn = document.getElementById('bgRemoveBtn');
-    if (bgRemoveBtn) {
-        bgRemoveBtn.addEventListener('click', handleBackgroundRemoval);
-    }
-
     // Presets
     presetCards.forEach(card => {
         card.addEventListener('click', () => {
@@ -525,81 +520,6 @@ async function downloadImage() {
     // Restore button state
     downloadBtn.innerHTML = oldText;
     downloadBtn.style.pointerEvents = 'auto';
-}
-
-async function handleBackgroundRemoval() {
-    if (!originalImage) {
-        alert('Please upload an image first');
-        return;
-    }
-
-    if (typeof bodyPix === 'undefined') {
-        alert('TensorFlow BodyPix model is not loaded yet. Please wait a moment or check your connection.');
-        return;
-    }
-
-    const overlay = document.getElementById('processingOverlay');
-    const text = document.getElementById('processingText');
-
-    try {
-        overlay.classList.remove('hidden');
-        text.textContent = 'Loading TensorFlow AI Model...';
-
-        // Load the model with higher accuracy parameters
-        const net = await bodyPix.load({
-            architecture: 'ResNet50', // Better accuracy than MobileNetV1
-            outputStride: 16,
-            quantBytes: 2
-        });
-
-        text.textContent = 'AI is segmenting the image...';
-
-        // We need an off-screen canvas to draw the full image for processing
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = originalImage.width || originalImage.naturalWidth;
-        tempCanvas.height = originalImage.height || originalImage.naturalHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.drawImage(originalImage, 0, 0, tempCanvas.width, tempCanvas.height);
-
-        // Segment the person from the canvas with high resolution
-        const segmentation = await net.segmentPerson(tempCanvas, {
-            flipHorizontal: false,
-            internalResolution: 'high', // Use high resolution for better edge detection
-            segmentationThreshold: 0.75 // Slightly stricter threshold for cleaner edges
-        });
-
-        text.textContent = 'Applying transparency mask...';
-
-        // Process pixel data to make background transparent
-        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-        const data = imageData.data;
-        const mask = segmentation.data;
-
-        for (let i = 0; i < data.length; i += 4) {
-            // mask[i/4] is 1 for person, 0 for background
-            if (mask[i / 4] === 0) {
-                data[i + 3] = 0; // Set Alpha to 0 (transparent)
-            }
-        }
-
-        tempCtx.putImageData(imageData, 0, 0);
-
-        // Convert result back to image
-        const resultUrl = tempCanvas.toDataURL('image/png');
-        const img = new Image();
-        img.onload = () => {
-            originalImage = img;
-            setupCanvas(img);
-            resetFilters();
-            overlay.classList.add('hidden');
-        };
-        img.src = resultUrl;
-
-    } catch (error) {
-        console.error('Background Removal Error:', error);
-        alert('Failed to remove background: ' + error.message);
-        overlay.classList.add('hidden');
-    }
 }
 
 async function loadHistory() {
