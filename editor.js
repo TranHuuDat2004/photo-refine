@@ -540,9 +540,14 @@ async function handleBackgroundRemoval() {
         overlay.classList.remove('hidden');
         text.textContent = 'Downloading AI Models...';
 
-        // Dynamically import the library from CDN
-        // Note: Using a specific version for stability
-        const module = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/index.js');
+        // Use a more stable CDN and a slightly newer version
+        const LIB_VERSION = '1.5.3';
+        const moduleURL = `https://cdn.jsdelivr.net/npm/@imgly/background-removal@${LIB_VERSION}/dist/index.js`;
+        const publicPath = `https://cdn.jsdelivr.net/npm/@imgly/background-removal@${LIB_VERSION}/dist/`;
+
+        console.log('Loading AI module from:', moduleURL);
+
+        const module = await import(moduleURL);
         const removeBackground = module.default;
 
         text.textContent = 'AI is processing image...';
