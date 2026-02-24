@@ -540,12 +540,13 @@ async function handleBackgroundRemoval() {
         overlay.classList.remove('hidden');
         text.textContent = 'Downloading AI Models...';
 
-        // Use the official img.ly CDN for best compatibility with WASM files
+        // Use unpkg.com as it is generally more accessible than static.img.ly in some regions
         const LIB_VERSION = '1.5.3';
-        const moduleURL = `https://static.img.ly/packages/@imgly/background-removal/${LIB_VERSION}/dist/index.js`;
-        const publicPath = `https://static.img.ly/packages/@imgly/background-removal/${LIB_VERSION}/dist/`;
+        const CDN_BASE = `https://unpkg.com/@imgly/background-removal@${LIB_VERSION}/dist/`;
+        const moduleURL = `${CDN_BASE}index.js`;
+        const publicPath = CDN_BASE;
 
-        console.log('Loading AI module from:', moduleURL);
+        console.log('Attempting to load AI module from:', moduleURL);
 
         const module = await import(moduleURL);
         const removeBackground = module.default;
@@ -562,7 +563,7 @@ async function handleBackgroundRemoval() {
                 text.textContent = `AI Processing: ${percent}%`;
             },
             model: 'medium',
-            publicPath: publicPath // Use the synchronized publicPath
+            publicPath: publicPath // Ensure WASM files are also loaded from unpkg
         });
 
         // Convert result to image and draw on canvas
