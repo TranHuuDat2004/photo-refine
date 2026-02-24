@@ -543,7 +543,7 @@ async function handleBackgroundRemoval() {
         // Use unpkg.com as it is generally more accessible than static.img.ly in some regions
         const LIB_VERSION = '1.5.3';
         const CDN_BASE = `https://unpkg.com/@imgly/background-removal@${LIB_VERSION}/dist/`;
-        const moduleURL = `${CDN_BASE}index.js`;
+        const moduleURL = `${CDN_BASE}index.mjs`; // Use .mjs for explicit ESM
         const publicPath = CDN_BASE;
 
         console.log('Attempting to load AI module from:', moduleURL);
