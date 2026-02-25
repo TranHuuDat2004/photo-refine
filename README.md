@@ -16,7 +16,7 @@ PhotoRefine is a professional-grade, browser-based image editor built with moder
   - Contrast & Saturation (Real-time Canvas filters).
   - Tonal Controls: Highlights and Shadows management.
   - Detail: Convolution-based Sharpening.
-- **Cloud-Synced History**: Powered by **MongoDB** and **Google OAuth**, allowing you to securely save, reload, and manage your edits across devices.
+- **Cloud-Synced History**: Powered by **MongoDB**, **Cloudinary**, and **Google OAuth**, allowing you to securely save, reload, and manage your edits across devices.
 - **High Performance**: Optimized pixel processing and scaled canvas rendering for a snappy experience.
 
 ## 🖼️ Before & After
@@ -39,6 +39,7 @@ PhotoRefine is a professional-grade, browser-based image editor built with moder
 ### Backend
 - **Node.js & Express**: Fast, lightweight server handling API routes and templating (EJS).
 - **MongoDB & Mongoose**: Secure database for storing user profiles and image edit history.
+- **Cloudinary**: Dedicated cloud storage and global CDN for lightning-fast image delivery.
 - **Passport.js**: Robust authentication using Google OAuth 2.0.
 
 ## 🚀 Getting Started
@@ -53,7 +54,7 @@ PhotoRefine is a professional-grade, browser-based image editor built with moder
    npm install
    ```
 3. Set up environment variables:
-   - Create a `.env` file in the `server` directory and configure your MongoDB URI and Google OAuth credentials (see `.env.example`).
+   - Create a `.env` file in the `server` directory and configure your MongoDB URI, Google OAuth credentials, and Cloudinary keys (see `.env.example`).
 4. Start the server:
    ```bash
    npm start
