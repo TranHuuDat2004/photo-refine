@@ -677,6 +677,7 @@ async function loadHistory() {
             img.onload = () => {
                 originalImage = img;
                 setupCanvas(img);
+                dropZone.classList.add('hidden');
                 resetFilters();
                 items.forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
