@@ -7,6 +7,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
+const cloudinary = require('cloudinary').v2;
 const User = require('./models/User');
 const Edit = require('./models/Edit');
 
@@ -23,13 +24,16 @@ app.set('views', path.join(__dirname, 'views'));
 // Serve static files from root directory
 app.use(express.static(path.join(__dirname, '../')));
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const REPO = process.env.GITHUB_REPO;
-const BRANCH = process.env.GITHUB_BRANCH || 'main';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/photorefine';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 const GOOGLE_REDIRECT_URI = process.env.NODE_ENV === 'production'
     ? 'https://photo-refine.onrender.com/login'
     : 'http://localhost:3000/login';
@@ -325,7 +329,7 @@ app.post('/api/auth/google/custom', async (req, res) => {
 
 // --- Editor Routes (Protected) ---
 
-// Upload image to GitHub & Save Reference to MongoDB
+// Upload image to Cloudinary & Save Reference to MongoDB
 app.post('/upload', auth, async (req, res) => {
     try {
         const { image, fileName } = req.body;
@@ -333,44 +337,31 @@ app.post('/upload', auth, async (req, res) => {
             return res.status(400).json({ error: 'Missing image or fileName' });
         }
 
-        // Remove data:image/png;base64, prefix
-        const base64Content = image.split(',')[1];
-        const githubPath = `edits/${req.user._id}/${fileName}`; // Scope path by user ID
-        const url = `https://api.github.com/repos/${REPO}/contents/${githubPath}`;
+        console.log(`Uploading to Cloudinary: ${fileName}`);
 
-        console.log(`Uploading to GitHub: ${githubPath}`);
-
-        const response = await axios.put(url, {
-            message: `Save edit for user ${req.user.username}: ${fileName}`,
-            content: base64Content,
-            branch: BRANCH
-        }, {
-            headers: {
-                Authorization: `token ${GITHUB_TOKEN}`,
-                Accept: 'application/vnd.github.v3+json'
-            }
+        // Upload to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(image, {
+            folder: `photorefine/${req.user._id}`,
+            public_id: fileName.split('.')[0] // Optional: use the filename without extension as public_id
         });
-
-        const githubUrl = response.data.content.download_url;
-        const githubSha = response.data.content.sha;
 
         // Save to MongoDB
         const edit = await Edit.create({
             userId: req.user._id,
             fileName: fileName,
-            githubUrl: githubUrl,
-            githubSha: githubSha
+            cloudinaryUrl: uploadResult.secure_url,
+            cloudinaryPublicId: uploadResult.public_id
         });
 
         res.json({
             success: true,
-            url: githubUrl,
+            url: uploadResult.secure_url,
             id: edit._id,
-            githubSha: githubSha
+            cloudinaryPublicId: uploadResult.public_id
         });
     } catch (error) {
-        console.error('Upload Error:', error.response?.data || error.message);
-        res.status(500).json({ error: 'Failed to upload photo', details: error.response?.data || error.message });
+        console.error('Upload Error:', error);
+        res.status(500).json({ error: 'Failed to upload photo', details: error.message });
     }
 });
 
@@ -382,9 +373,9 @@ app.get('/history', auth, async (req, res) => {
 
         const history = edits.map(edit => ({
             id: edit._id,                // MongoDB ID
-            image: edit.githubUrl,       // GitHub raw URL
+            image: edit.cloudinaryUrl,       // Cloudinary URL
             name: edit.fileName,         // Original file name
-            githubSha: edit.githubSha,   // Needed for deletions
+            cloudinaryPublicId: edit.cloudinaryPublicId,   // Needed for deletions
             timestamp: new Date(edit.createdAt).getTime()
         }));
 
@@ -395,7 +386,7 @@ app.get('/history', auth, async (req, res) => {
     }
 });
 
-// Delete from GitHub and MongoDB
+// Delete from Cloudinary and MongoDB
 app.delete('/history/:id', auth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -406,25 +397,12 @@ app.delete('/history/:id', auth, async (req, res) => {
             return res.status(404).json({ error: 'Edit not found or unauthorized' });
         }
 
-        const githubPath = `edits/${req.user._id}/${edit.fileName}`;
-        const url = `https://api.github.com/repos/${REPO}/contents/${githubPath}`;
-
-        // Delete from GitHub
+        // Delete from Cloudinary
         try {
-            await axios.delete(url, {
-                headers: {
-                    Authorization: `token ${GITHUB_TOKEN}`,
-                    Accept: 'application/vnd.github.v3+json'
-                },
-                data: {
-                    message: `Delete edit: ${githubPath}`,
-                    sha: edit.githubSha,
-                    branch: BRANCH
-                }
-            });
-        } catch (githubError) {
-            console.error('GitHub Delete Error (might already be deleted):', githubError.response?.data || githubError.message);
-            // Continue to delete from DB even if GitHub delete fails
+            await cloudinary.uploader.destroy(edit.cloudinaryPublicId);
+        } catch (cloudinaryError) {
+            console.error('Cloudinary Delete Error:', cloudinaryError.message);
+            // Continue to delete from DB even if Cloudinary delete fails
         }
 
         // Delete from MongoDB

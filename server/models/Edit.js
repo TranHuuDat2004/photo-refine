@@ -6,11 +6,11 @@ const EditSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    githubUrl: {
+    cloudinaryUrl: {
         type: String,
         required: true
     },
-    githubSha: {
+    cloudinaryPublicId: {
         type: String,
         required: true
     },
