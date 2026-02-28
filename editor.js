@@ -20,8 +20,13 @@ const sliders = {
     temperature: document.getElementById('temperature'),
     tint: document.getElementById('tint'),
     highlights: document.getElementById('highlights'),
+    midtones: document.getElementById('midtones'),
     shadows: document.getElementById('shadows'),
-    sharpen: document.getElementById('sharpen')
+    sharpen: document.getElementById('sharpen'),
+    dehaze: document.getElementById('dehaze'),
+    denoise: document.getElementById('denoise'),
+    vignette: document.getElementById('vignette'),
+    grain: document.getElementById('grain')
 };
 
 // Value displays
@@ -33,29 +38,34 @@ const valDisplays = {
     temperature: document.getElementById('temperatureVal'),
     tint: document.getElementById('tintVal'),
     highlights: document.getElementById('highlightsVal'),
+    midtones: document.getElementById('midtonesVal'),
     shadows: document.getElementById('shadowsVal'),
-    sharpen: document.getElementById('sharpenVal')
+    sharpen: document.getElementById('sharpenVal'),
+    dehaze: document.getElementById('dehazeVal'),
+    denoise: document.getElementById('denoiseVal'),
+    vignette: document.getElementById('vignetteVal'),
+    grain: document.getElementById('grainVal')
 };
 
 const historyList = document.getElementById('historyList');
 const presetCards = document.querySelectorAll('.preset-card');
 
 const presets = {
-    none: { brightness: 100, contrast: 100, saturation: 100, blur: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0, sharpen: 0 },
-    bold: { brightness: 105, contrast: 112, saturation: 120, blur: 0, temperature: 5, tint: 0, highlights: -10, shadows: -5, sharpen: 35 },
-    vivid: { brightness: 100, contrast: 110, saturation: 140, blur: 0, temperature: 10, tint: 5, highlights: 5, shadows: 0, sharpen: 20 },
-    vintage: { brightness: 110, contrast: 95, saturation: 70, blur: 0, temperature: 30, tint: -10, highlights: 20, shadows: 15, sharpen: 0 },
-    bw: { brightness: 100, contrast: 120, saturation: 0, blur: 0, temperature: 0, tint: 0, highlights: 10, shadows: -10, sharpen: 25 },
-    cinematic: { brightness: 95, contrast: 115, saturation: 85, blur: 0, temperature: -10, tint: 15, highlights: -15, shadows: 5, sharpen: 30 },
-    golden: { brightness: 110, contrast: 105, saturation: 125, blur: 0, temperature: 40, tint: 10, highlights: 25, shadows: 0, sharpen: 15 },
-    teal: { brightness: 90, contrast: 110, saturation: 110, blur: 0, temperature: -30, tint: 20, highlights: -10, shadows: -20, sharpen: 20 },
-    moody: { brightness: 85, contrast: 130, saturation: 70, blur: 0, temperature: -15, tint: -5, highlights: -25, shadows: -15, sharpen: 10 },
-    dreamy: { brightness: 115, contrast: 85, saturation: 90, blur: 2, temperature: 10, tint: 20, highlights: 35, shadows: 20, sharpen: 0 },
-    highkey: { brightness: 130, contrast: 90, saturation: 105, blur: 0, temperature: 5, tint: -5, highlights: 45, shadows: 30, sharpen: 5 },
-    gritty: { brightness: 90, contrast: 140, saturation: 60, blur: 0, temperature: 0, tint: 15, highlights: -5, shadows: -20, sharpen: 60 },
-    cold: { brightness: 100, contrast: 108, saturation: 80, blur: 0, temperature: -40, tint: 0, highlights: 0, shadows: 5, sharpen: 15 },
-    retro: { brightness: 105, contrast: 95, saturation: 85, blur: 1, temperature: 20, tint: 15, highlights: 15, shadows: 10, sharpen: 5 },
-    neon: { brightness: 100, contrast: 125, saturation: 180, blur: 0, temperature: -20, tint: 30, highlights: 10, shadows: 0, sharpen: 25 }
+    none: { brightness: 100, contrast: 100, saturation: 100, blur: 0, temperature: 0, tint: 0, highlights: 0, midtones: 0, shadows: 0, sharpen: 0, dehaze: 0, denoise: 0, vignette: 0, grain: 0 },
+    bold: { brightness: 105, contrast: 112, saturation: 120, blur: 0, temperature: 5, tint: 0, highlights: -10, midtones: 5, shadows: -5, sharpen: 35, dehaze: 10, denoise: 0, vignette: 15, grain: 0 },
+    vivid: { brightness: 100, contrast: 110, saturation: 140, blur: 0, temperature: 10, tint: 5, highlights: 5, midtones: 0, shadows: 0, sharpen: 20, dehaze: 0, denoise: 0, vignette: 0, grain: 0 },
+    vintage: { brightness: 110, contrast: 95, saturation: 70, blur: 0, temperature: 30, tint: -10, highlights: 20, midtones: 10, shadows: 15, sharpen: 0, dehaze: 0, denoise: 5, vignette: 25, grain: 40 },
+    bw: { brightness: 100, contrast: 120, saturation: 0, blur: 0, temperature: 0, tint: 0, highlights: 10, midtones: 0, shadows: -10, sharpen: 25, dehaze: 5, denoise: 0, vignette: 10, grain: 20 },
+    cinematic: { brightness: 95, contrast: 115, saturation: 85, blur: 0, temperature: -10, tint: 15, highlights: -15, midtones: -5, shadows: 5, sharpen: 30, dehaze: 0, denoise: 0, vignette: 30, grain: 15 },
+    golden: { brightness: 110, contrast: 105, saturation: 125, blur: 0, temperature: 40, tint: 10, highlights: 25, midtones: 15, shadows: 0, sharpen: 15, dehaze: 0, denoise: 0, vignette: 5, grain: 0 },
+    teal: { brightness: 90, contrast: 110, saturation: 110, blur: 0, temperature: -30, tint: 20, highlights: -10, midtones: 0, shadows: -20, sharpen: 20, dehaze: 15, denoise: 0, vignette: 20, grain: 5 },
+    moody: { brightness: 85, contrast: 130, saturation: 70, blur: 0, temperature: -15, tint: -5, highlights: -25, midtones: -10, shadows: -15, sharpen: 10, dehaze: 5, denoise: 0, vignette: 40, grain: 25 },
+    dreamy: { brightness: 115, contrast: 85, saturation: 90, blur: 2, temperature: 10, tint: 20, highlights: 35, midtones: 20, shadows: 20, sharpen: 0, dehaze: 0, denoise: 15, vignette: -10, grain: 0 },
+    highkey: { brightness: 130, contrast: 90, saturation: 105, blur: 0, temperature: 5, tint: -5, highlights: 45, midtones: 25, shadows: 30, sharpen: 5, dehaze: 0, denoise: 0, vignette: -20, grain: 0 },
+    gritty: { brightness: 90, contrast: 140, saturation: 60, blur: 0, temperature: 0, tint: 15, highlights: -5, midtones: -15, shadows: -20, sharpen: 60, dehaze: 20, denoise: 0, vignette: 35, grain: 60 },
+    cold: { brightness: 100, contrast: 108, saturation: 80, blur: 0, temperature: -40, tint: 0, highlights: 0, midtones: 5, shadows: 5, sharpen: 15, dehaze: 0, denoise: 0, vignette: 10, grain: 0 },
+    retro: { brightness: 105, contrast: 95, saturation: 85, blur: 1, temperature: 20, tint: 15, highlights: 15, midtones: 10, shadows: 10, sharpen: 5, dehaze: 0, denoise: 10, vignette: 20, grain: 30 },
+    neon: { brightness: 100, contrast: 125, saturation: 180, blur: 0, temperature: -20, tint: 30, highlights: 10, midtones: 0, shadows: 0, sharpen: 25, dehaze: 10, denoise: 0, vignette: 15, grain: 10 }
 };
 
 /**
@@ -412,29 +422,47 @@ function applyFilters() {
     ctx.drawImage(canvas, 0, 0);
     ctx.filter = 'none';
 
-    // 2. Custom Pixel Processing (Highlights, Shadows, Sharpen, Temp, Tint)
+    // 2. Custom Pixel Processing
     const highlights = parseInt(sliders.highlights.value);
+    const midtones = parseInt(sliders.midtones.value);
     const shadows = parseInt(sliders.shadows.value);
     const sharpen = parseInt(sliders.sharpen.value);
     const temperature = parseInt(sliders.temperature.value);
     const tint = parseInt(sliders.tint.value);
+    const dehaze = parseInt(sliders.dehaze.value);
+    const denoise = parseInt(sliders.denoise.value);
+    const vignette = parseInt(sliders.vignette.value);
+    const grain = parseInt(sliders.grain.value);
 
-    if (highlights !== 0 || shadows !== 0 || sharpen > 0 || temperature !== 0 || tint !== 0) {
+    if (highlights !== 0 || midtones !== 0 || shadows !== 0 || sharpen > 0 || temperature !== 0 || tint !== 0 || dehaze > 0 || denoise > 0 || vignette > 0 || grain > 0) {
         let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        // Dehaze & Denoise should ideally run before color/lighting tweaks or early on
+        if (denoise > 0) {
+            imageData = applyDenoise(imageData, denoise);
+        }
+        if (dehaze > 0) {
+            imageData = applyDehaze(imageData, dehaze);
+        }
 
         // Temperature & Tint
         if (temperature !== 0 || tint !== 0) {
             imageData = applyTemperatureTint(imageData, temperature, tint);
         }
 
-        // Highlights & Shadows
-        if (highlights !== 0 || shadows !== 0) {
-            imageData = applyHighlightsShadows(imageData, highlights, shadows);
+        // Highlights, Midtones, Shadows
+        if (highlights !== 0 || midtones !== 0 || shadows !== 0) {
+            imageData = applyHighlightsMidtonesShadows(imageData, highlights, midtones, shadows);
         }
 
         // Sharpen (Convolution)
         if (sharpen > 0) {
             imageData = applySharpen(imageData, sharpen / 100);
+        }
+
+        // Vignette & Grain (typically applied last)
+        if (vignette > 0 || grain > 0) {
+            imageData = applyVignetteGrain(imageData, vignette, grain);
         }
 
         ctx.putImageData(imageData, 0, 0);
@@ -525,11 +553,12 @@ function applyCrop() {
 }
 
 /**
- * Adjust Highlights and Shadows based on pixel luminance
+ * Adjust Highlights, Midtones, and Shadows based on pixel luminance
  */
-function applyHighlightsShadows(imageData, highlights, shadows) {
+function applyHighlightsMidtonesShadows(imageData, highlights, midtones, shadows) {
     const data = imageData.data;
     const hFactor = highlights / 100;
+    const mFactor = midtones / 100;
     const sFactor = shadows / 100;
 
     for (let i = 0; i < data.length; i += 4) {
@@ -542,16 +571,24 @@ function applyHighlightsShadows(imageData, highlights, shadows) {
 
         let multiplier = 1;
 
+        // Shadows (lum < 0.5)
+        if (lum < 0.5 && shadows !== 0) {
+            const weight = (0.5 - lum) * 2; // 0 to 1
+            multiplier += sFactor * weight;
+        }
+
         // Highlights (lum > 0.5)
         if (lum > 0.5 && highlights !== 0) {
             const weight = (lum - 0.5) * 2; // 0 to 1
             multiplier += hFactor * weight;
         }
 
-        // Shadows (lum < 0.5)
-        if (lum < 0.5 && shadows !== 0) {
-            const weight = (0.5 - lum) * 2; // 0 to 1
-            multiplier += sFactor * weight;
+        // Midtones (Gaussian-like curve centered at 0.5)
+        if (midtones !== 0) {
+            // Distance from 0.5, inverted
+            const dist = Math.abs(lum - 0.5) * 2; // 0 at center, 1 at edges
+            const weight = Math.max(0, 1 - dist);
+            multiplier += mFactor * weight;
         }
 
         data[i] = Math.min(255, Math.max(0, r * multiplier));
@@ -606,6 +643,117 @@ function applySharpen(imageData, amount) {
     }
 
     imageData.data.set(output);
+    return imageData;
+}
+
+/**
+ * Apply Denoise (Box Blur proxy for performance)
+ */
+function applyDenoise(imageData, amount) {
+    // Simply uses a box blur approach but only applied lightly based on amount
+    // amount represents radius (0 to 10 mapped from sliders 0-100)
+    const radius = Math.floor(amount / 10);
+    if (radius === 0) return imageData; // Too small to blur
+
+    const w = imageData.width;
+    const h = imageData.height;
+    const data = imageData.data;
+    const output = new Uint8ClampedArray(data.length);
+
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const idx = (y * w + x) * 4;
+            let r = 0, g = 0, b = 0, count = 0;
+
+            for (let ky = -radius; ky <= radius; ky++) {
+                for (let kx = -radius; kx <= radius; kx++) {
+                    const py = Math.min(h - 1, Math.max(0, y + ky));
+                    const px = Math.min(w - 1, Math.max(0, x + kx));
+                    const pIdx = (py * w + px) * 4;
+
+                    r += data[pIdx];
+                    g += data[pIdx + 1];
+                    b += data[pIdx + 2];
+                    count++;
+                }
+            }
+
+            output[idx] = r / count;
+            output[idx + 1] = g / count;
+            output[idx + 2] = b / count;
+            output[idx + 3] = data[idx + 3];
+        }
+    }
+
+    imageData.data.set(output);
+    return imageData;
+}
+
+/**
+ * Apply Dehaze (Contrast stretching in shadow/cloudy regions)
+ */
+function applyDehaze(imageData, amount) {
+    const data = imageData.data;
+    const factor = (259 * (amount + 255)) / (255 * (259 - amount));
+
+    for (let i = 0; i < data.length; i += 4) {
+        // Boost contrast heavily but bring down overall brightness to recover lost dark sky details
+        data[i] = factor * (data[i] - 128) + 128 - (amount * 0.5);
+        data[i + 1] = factor * (data[i + 1] - 128) + 128 - (amount * 0.5);
+        data[i + 2] = factor * (data[i + 2] - 128) + 128 - (amount * 0.5);
+    }
+    return imageData;
+}
+
+/**
+ * Apply Vignette (darken corners) and Grain (Film Noise)
+ */
+function applyVignetteGrain(imageData, vignetteAmount, grainAmount) {
+    const w = imageData.width;
+    const h = imageData.height;
+    const data = imageData.data;
+
+    const cx = w / 2;
+    const cy = h / 2;
+    const maxDist = Math.sqrt(cx * cx + cy * cy);
+
+    const vFactor = vignetteAmount / 100;
+    const gFactor = grainAmount / 100;
+
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const idx = (y * w + x) * 4;
+
+            let r = data[idx];
+            let g = data[idx + 1];
+            let b = data[idx + 2];
+
+            // 1. Vignette
+            if (vignetteAmount > 0) {
+                const dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
+                const vignetteStrength = (dist / maxDist) * vFactor;
+                // Exponential falloff for smooth corners
+                const darkening = 1 - Math.pow(vignetteStrength, 2);
+
+                r *= darkening;
+                g *= darkening;
+                b *= darkening;
+            }
+
+            // 2. Grain
+            if (grainAmount > 0) {
+                // monochromatic noise
+                const noise = (Math.random() - 0.5) * 50 * gFactor;
+                r += noise;
+                g += noise;
+                b += noise;
+            }
+
+            data[idx] = Math.min(255, Math.max(0, r));
+            data[idx + 1] = Math.min(255, Math.max(0, g));
+            data[idx + 2] = Math.min(255, Math.max(0, b));
+        }
+    }
     return imageData;
 }
 
