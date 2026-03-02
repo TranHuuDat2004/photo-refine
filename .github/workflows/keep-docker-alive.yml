@@ -1,0 +1,16 @@
+name: Keep Docker Hub Image Alive
+
+on:
+  schedule:
+    # Chạy vào lúc 00:00 ngày 1 hàng tháng
+    - cron: '0 0 1 * *'
+  workflow_dispatch: # Cho phép bạn bấm nút chạy thủ công để test
+
+jobs:
+  pull-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull Docker Image
+        run: |
+          docker pull mydockerhubuser/photo-refine:latest
+          echo "Đã pull image thành công vào lúc $(date)"
