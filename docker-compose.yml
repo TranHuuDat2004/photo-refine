@@ -1,0 +1,35 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  app:
+    build: .
+    # Replace with your Docker Hub username
+    image: mydockerhubuser/photo-refine:latest
+    container_name: photo-refine-app
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb://mongo:27017/photorefine
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-your_google_client_id}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-your_google_client_secret}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-your_cloudinary_cloud_name}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-your_cloudinary_api_key}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-your_cloudinary_api_secret}
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:latest
+    container_name: photo-refine-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
