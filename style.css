@@ -60,8 +60,8 @@ header h1 span {
 }
 
 .app-logo {
-    width: 32px;
-    height: 32px;
+    width: 320px;
+    height: 48px;
     object-fit: contain;
 }
 
